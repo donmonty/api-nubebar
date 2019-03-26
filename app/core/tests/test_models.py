@@ -40,6 +40,20 @@ def sucursal_dummy(**params):
     return models.Sucursal.objects.create(**defaults)
 
 
+def almacen_dummy(**params):
+    """ Crea un almacen dummy para los tests """
+
+    defaults = {
+        'nombre': 'BARRA 1',
+        'numero': 1,
+        'sucursal': sucursal_dummy()
+    }
+
+    defaults.update(params)
+
+    return models.Almacen.objects.create(**defaults)
+
+
 def categoria_dummy(**params):
     """ Crea una categoría dummy para los tests """
 
@@ -161,8 +175,9 @@ class ModelTests(TestCase):
             email=email,
             password=password,
         )
+        print(email.lower())
 
-        self.assertEqual(user.email, email.lower)
+        self.assertEqual(user.email, email.lower())
 
     
     def test_new_user_invalid_email(self):
@@ -232,7 +247,7 @@ class ModelTests(TestCase):
         nombre = 'JACK DANIELS DERECHO'
         sucursal = sucursal_dummy()
 
-        receta = models.objects.create(
+        receta = models.Receta.objects.create(
             codigo_pos=codigo_pos,
             nombre=nombre,
             sucursal=sucursal
@@ -244,8 +259,8 @@ class ModelTests(TestCase):
     def test_crear_ingredientereceta(self):
         """ Testear que se construye un IngredienteReceta con éxito """
 
-        receta = receta_dummy
-        ingrediente = ingrediente_dummy
+        receta = receta_dummy()
+        ingrediente = ingrediente_dummy()
         volumen = 90
 
         ingrediente_receta = models.IngredienteReceta.objects.create(
@@ -254,7 +269,50 @@ class ModelTests(TestCase):
             volumen=volumen
         )
 
-        self.assertEqual(receta.nombre, ingrediente_receta.receta__nombre)
+        ingredientes = receta.ingredientes.all()
+
+        self.assertEqual(ingredientes.count(), 1)
+
+
+    def test_crear_almacen(self):
+        """ Testear que se construye un Almacen """
+
+        nombre = 'BARRA 1'
+        numero = 1
+        sucursal = sucursal_dummy()
+
+        almacen = models.Almacen.objects.create(
+            nombre=nombre,
+            numero=numero,
+            sucursal=sucursal
+        )
+
+        almacenes_sucursal = sucursal.almacenes.all()
+
+        self.assertEqual(almacen.nombre, nombre)
+        self.assertEqual(almacenes_sucursal.count(), 1)
+
+    
+    def test_crear_caja(self):
+        """ Testear que se construye una Caja """
+
+        numero = 1
+        nombre = 'CAJA 1'
+        almacen = almacen_dummy()
+
+        caja = models.Caja.objects.create(
+            numero=numero,
+            nombre=nombre,
+            almacen=almacen
+        )
+
+        cajas_almacen = almacen.cajas.all()
+
+        self.assertEqual(caja.numero, numero)
+        self.assertEqual(cajas_almacen.count(), 1)
+
+    
+
 
 
 

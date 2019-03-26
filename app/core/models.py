@@ -174,6 +174,45 @@ class IngredienteReceta(models.Model):
 		return '{} - {} - {}'.format(nombre_receta, nombre_ingrediente, self.voumen)
 
 
+"""
+--------------------------------------------------------------------------
+Un Almacen es una barra o bodega donde se guardan botellas. Puede tener
+una o varias cajas.
+--------------------------------------------------------------------------
+"""
+
+class Almacen(models.Model):
+
+	nombre 		= models.CharField(max_length=255, blank=True)
+	numero 		= models.IntegerField(default=1)
+	sucursal 	= models.ForeignKey(Sucursal, related_name='almacenes', on_delete=models.CASCADE)
+
+	def __str__(self):
+		nombre_sucursal = self.sucursal.nombre
+
+		return '{} - {}'.format(self.nombre, nombre_sucursal)
+
+
+"""
+--------------------------------------------------------------------------
+Una Caja registra ventas y siempre está asociada a un Almacen
+--------------------------------------------------------------------------
+"""
+
+class Caja(models.Model):
+
+	numero 		= models.IntegerField(default=1)
+	nombre 		= models.CharField(max_length=255, blank=True)
+	almacen 	= models.ForeignKey(Almacen, related_name='cajas', on_delete=models.CASCADE)
+
+	def __str__(self):
+		nombre_almacen = self.almacen.nombre
+		nombre_sucursal = self.almacen__sucursal.nombre
+
+		return 'CAJA: {} - BARRA: {} - SUCURSAL: {}'.format(self.numero, nombre_almacen, nombre_sucursal)
+
+
+
 
 
 
