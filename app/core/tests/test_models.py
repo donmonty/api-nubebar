@@ -42,7 +42,7 @@ def sucursal_dummy(**params):
 
 """
 ---------------------------------------------------------
-TESTS PARA LOS MODELOS DE LA BASE DE DATOS
+TESTS PARA LOS MODELOS DE LA APP
 ---------------------------------------------------------
 """
 class ModelTests(TestCase):
@@ -126,4 +126,27 @@ class ModelTests(TestCase):
         sucursales_usuario = user.sucursales.all()
 
         self.assertEqual(sucursales_usuario.count(), 1)
+
+
+    def test_crear_ingrediente(self):
+        """ Testear que se construye un Ingrediente con éxito """
+
+        codigo = 'WHIS001'
+        nombre = 'JACK DANIELS'
+        categoria = models.Categoria.objects.create(nombre='WHISKY')
+        factor_peso = 0.95
+
+        ingrediente = models.Ingrediente.objects.create(
+            codigo=codigo,
+            nombre=nombre,
+            categoria=categoria,
+            factor_peso=factor_peso
+        )
+
+        ingredientes_categoria = categoria.ingredientes.all()
+
+        self.assertEqual(ingrediente.codigo, codigo)
+        self.assertEqual(ingredientes_categoria.count(), 1)
+
+    
 

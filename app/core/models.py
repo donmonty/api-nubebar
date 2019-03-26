@@ -94,3 +94,34 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
+
+
+"""
+--------------------------------------------------------------------------
+Categoria del ingrediente (WHISKY, TEQUILA, VODKA, etc)
+--------------------------------------------------------------------------
+"""
+
+class Categoria(models.Model):
+
+	nombre = models.CharField(max_length=255)
+
+	def __str__(self):
+		return self.nombre
+
+
+"""
+--------------------------------------------------------------------------
+Un Ingrediente es un destilado. Un ingrediente puede estar en varias recetas
+--------------------------------------------------------------------------
+"""
+
+class Ingrediente(models.Model):
+
+	codigo 		= models.CharField(max_length=255)
+	nombre 		= models.CharField(max_length=255)
+	categoria 	= models.ForeignKey(Categoria, related_name='ingredientes', on_delete=models.CASCADE)
+	factor_peso = models.DecimalField(max_digits=3, decimal_places=2, blank=True, null=True)
+
+	def __str__(self):
+		return '{} - {}'.format(self.nombre, self.codigo)
