@@ -212,6 +212,48 @@ class Caja(models.Model):
 		return 'CAJA: {} - BARRA: {} - SUCURSAL: {}'.format(self.numero, nombre_almacen, nombre_sucursal)
 
 
+"""
+--------------------------------------------------------------------------
+Una Venta registra la venta de una Receta que ocurre en una Sucursal a
+través de una Caja
+--------------------------------------------------------------------------
+"""
+
+class Venta(models.Model):
+
+	receta 		= models.ForeignKey(Receta, related_name='ventas_receta', on_delete=models.CASCADE)
+	sucursal 	= models.ForeignKey(Sucursal, related_name='ventas_sucursal', on_delete=models.CASCADE)
+	fecha 		= models.DateField()
+	unidades 	= models.IntegerField()
+	importe 	= models.IntegerField()
+	caja     	= models.ForeignKey(Caja, related_name='ventas_caja', on_delete=models.CASCADE)
+
+	def __str__(self):
+		nombre_receta = self.receta.nombre
+		nombre_sucursal = self.sucursal.nombre
+
+		return 'RECETA: {} - SUCURSAL: {} - FECHA: {} - UNIDADES: {} - IMPORTE: {} - CAJA: {}'.format(nombre_receta, nombre_sucursal, self.fecha, self.unidades, self.importe, self.caja)
+
+
+"""
+--------------------------------------------------------------------------
+La venta de una Receta provoca el consumo de uno o más ingredientes
+--------------------------------------------------------------------------
+"""
+
+class ConsumoRecetaVendida(models.Model):
+
+	ingrediente 	= models.ForeignKey(Ingrediente, related_name='consumos_ingrediente', on_delete=models.CASCADE)
+	receta 			= models.ForeignKey(Receta, related_name='consumos_receta', on_delete=models.CASCADE)
+	venta 			= models.ForeignKey(Venta, related_name='consumos_venta', on_delete=models.CASCADE)
+	fecha 			= models.DateField()
+	volumen 		= models.IntegerField()
+
+	def __str__(self):
+		nombre_ingrediente = self.ingrediente.nombre
+		nombre_receta = self.receta.nombre
+
+		return 'INGREDIENTE: {} - RECETA: {} - VENTA: {} - FECHA: {} - VOLUMEN {}'.format(nombre_ingrediente, nombre_receta, self.venta, self.fecha, self.volumen)
 
 
 

@@ -54,6 +54,37 @@ def almacen_dummy(**params):
     return models.Almacen.objects.create(**defaults)
 
 
+def caja_dummy(**params):
+    """ Crea una caja dummy para los tests """
+
+    defaults = {
+        'numero': 1,
+        'nombre': 'BARRA 1',
+        'almacen': almacen_dummy()
+    }
+
+    defaults.update(params)
+
+    return models.Caja.objects.create(**defaults)
+
+
+def venta_dummy(**params):
+    """ Crea una venta para los tests """
+
+    defaults = {
+        'receta': receta_dummy(),
+        'sucursal': sucursal_dummy(),
+        'fecha': '2019-03-26',
+        'unidades': 1,
+        'importe': 200,
+        'caja': caja_dummy()
+    } 
+
+    defaults.update(params)
+
+    return models.Venta.objects.create(**defaults)
+
+
 def categoria_dummy(**params):
     """ Crea una categoría dummy para los tests """
 
@@ -310,6 +341,63 @@ class ModelTests(TestCase):
 
         self.assertEqual(caja.numero, numero)
         self.assertEqual(cajas_almacen.count(), 1)
+
+
+    def test_crear_venta(self):
+        """ Testear que se construye una venta """
+
+        receta = receta_dummy()
+        sucursal = sucursal_dummy()
+        fecha = '2019-03-26'
+        unidades = 1
+        importe = 200
+        caja = caja_dummy()
+
+        venta = models.Venta.objects.create(
+            receta=receta,
+            sucursal=sucursal,
+            fecha=fecha,
+            unidades=unidades,
+            importe=importe,
+            caja=caja
+        )
+
+        ventas_receta = receta.ventas_receta.all()
+        ventas_sucursal = sucursal.ventas_sucursal.all()
+        ventas_caja = caja.ventas_caja.all()
+
+        self.assertEqual(ventas_receta.count(), 1)
+        self.assertEqual(ventas_sucursal.count(), 1)
+        self.assertEqual(ventas_caja.count(), 1)
+
+    
+    def test_crear_consumorecetavendida(self):
+        """ Testear que se crea un ConsumoRecetaVendida """
+
+        ingrediente = ingrediente_dummy()
+        receta = receta_dummy()
+        venta = venta_dummy()
+        fecha = '2019-03-26'
+        volumen = 90
+
+        consumo_receta_vendida = models.ConsumoRecetaVendida.objects.create(
+            ingrediente=ingrediente,
+            receta=receta,
+            venta=venta,
+            fecha=fecha,
+            volumen=volumen
+        )
+
+        consumos_ingrediente = ingrediente.consumos_ingrediente.all()
+        consumos_receta = receta.consumos_receta.all()
+        consumos_venta = venta.consumos_venta.all()
+
+        self.assertEqual(consumos_ingrediente.count(), 1)
+        self.assertEqual(consumos_receta.count(), 1)
+        self.assertEqual(consumos_venta.count(), 1)
+
+
+
 
     
 
