@@ -40,6 +40,47 @@ def sucursal_dummy(**params):
     return models.Sucursal.objects.create(**defaults)
 
 
+def categoria_dummy(**params):
+    """ Crea una categoría dummy para los tests """
+
+    defaults = {
+        'nombre': 'WHISKY',
+    }
+
+    defaults.update(params)
+
+    return models.Categoria.objects.create(**defaults)
+
+
+def ingrediente_dummy(**params):
+    """ Crea un ingrediente dummy para los tests """
+
+    defaults = {
+        'codigo': 'WHIS001',
+        'nombre': 'JACK DANIELS',
+        'categoria': categoria_dummy(),
+        'factor_peso': 0.92
+    }
+
+    defaults.update(params)
+
+    return models.Ingrediente.objects.create(**defaults)
+
+
+def receta_dummy(**params):
+    """ Crea una receta dummy para los tests """
+
+    defaults = {
+        'codigo_pos': 'CPWHIS001',
+        'nombre': 'JACK DANIELS DERECHO',
+        'sucursal': sucursal_dummy()
+    }
+
+    defaults.update(params)
+
+    return models.Receta.objects.create(**defaults)
+
+
 """
 ---------------------------------------------------------
 TESTS PARA LOS MODELOS DE LA APP
@@ -182,6 +223,41 @@ class ModelTests(TestCase):
 
         self.assertEqual(ingrediente.codigo, codigo)
         self.assertEqual(ingredientes_categoria.count(), 1)
+
+
+    def  test_crear_receta(self):
+        """ Testear que se construya una Receta con éxito """
+
+        codigo_pos = 'CPWHIS001',
+        nombre = 'JACK DANIELS DERECHO'
+        sucursal = sucursal_dummy()
+
+        receta = models.objects.create(
+            codigo_pos=codigo_pos,
+            nombre=nombre,
+            sucursal=sucursal
+        )
+
+        self.assertEqual(receta.codigo_pos, codigo_pos)
+        
+    
+    def test_crear_ingredientereceta(self):
+        """ Testear que se construye un IngredienteReceta con éxito """
+
+        receta = receta_dummy
+        ingrediente = ingrediente_dummy
+        volumen = 90
+
+        ingrediente_receta = models.IngredienteReceta.objects.create(
+            receta=receta,
+            ingrediente=ingrediente,
+            volumen=volumen
+        )
+
+        self.assertEqual(receta.nombre, ingrediente_receta.receta__nombre)
+
+
+
 
     
 

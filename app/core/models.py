@@ -67,7 +67,7 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_super_user(self, email, password):
+    def create_superuser(self, email, password):
         """ Creates and saves a new super user """
 
         user = self.create_user(email, password)
@@ -121,12 +121,59 @@ Un Ingrediente es un destilado. Un ingrediente puede estar en varias recetas
 
 class Ingrediente(models.Model):
 
-	codigo 		= models.CharField(max_length=255)
+	codigo 		= models.CharField(max_length=255, unique=True)
 	nombre 		= models.CharField(max_length=255)
 	categoria 	= models.ForeignKey(Categoria, related_name='ingredientes', on_delete=models.CASCADE)
 	factor_peso = models.DecimalField(max_digits=3, decimal_places=2, blank=True, null=True)
 
 	def __str__(self):
 		return '{} - {}'.format(self.nombre, self.codigo)
+
+
+
+"""
+--------------------------------------------------------------------------
+Una Receta es un trago, coctel o botella que está en el menú. Puede tener
+uno o varios ingredientes
+--------------------------------------------------------------------------
+"""
+
+class Receta(models.Model):
+
+	codigo_pos 		= models.CharField(max_length=255)
+	nombre 			= models.CharField(max_length=255)
+	sucursal 		= models.ForeignKey(Sucursal, related_name='recetas', on_delete=models.CASCADE)
+	ingredientes 	= models.ManyToManyField(Ingrediente, through='IngredienteReceta')
+
+
+	def __str__(self):
+		nombre_sucursal = self.sucursal.nombre
+		
+		return '{} - {} - {}'.format(self.codigo_pos, self.nombre, nombre_sucursal)
+
+
+"""
+--------------------------------------------------------------------------
+Modelo intermedio entre Ingrediente y Receta
+--------------------------------------------------------------------------
+"""
+
+class IngredienteReceta(models.Model):
+
+	receta 		= models.ForeignKey(Receta, on_delete=models.CASCADE)
+	ingrediente = models.ForeignKey(Ingrediente, on_delete=models.CASCADE)
+	volumen 	= models.IntegerField()
+
+	class Meta:
+		unique_together = ['receta', 'ingrediente']
+
+	def __str__(self):
+		nombre_receta = self.receta.nombre
+		nombre_ingrediente = self.ingrediente.nombre
+		
+		return '{} - {} - {}'.format(nombre_receta, nombre_ingrediente, self.voumen)
+
+
+
 
 
