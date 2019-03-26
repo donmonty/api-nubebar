@@ -397,6 +397,28 @@ class ModelTests(TestCase):
         self.assertEqual(consumos_venta.count(), 1)
 
 
+    def test_crear_producto(self):
+        """ Testear que se crea un Producto """
+
+        folio = 'Nn0000000001'
+        ingrediente = ingrediente_dummy()
+        url = 'https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Ii0763516458'
+        capacidad = 750
+        
+        producto = models.Producto.objects.create(
+            folio=folio,
+            ingrediente=ingrediente,
+            url=url,
+            capacidad=capacidad
+        )
+
+        productos_ingrediente = ingrediente.productos.all()
+
+        self.assertEqual(producto.folio, folio)
+        self.assertEqual(productos_ingrediente.count(), 1)
+        
+
+
 
 
     

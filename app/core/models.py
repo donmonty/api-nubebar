@@ -256,5 +256,43 @@ class ConsumoRecetaVendida(models.Model):
 		return 'INGREDIENTE: {} - RECETA: {} - VENTA: {} - FECHA: {} - VOLUMEN {}'.format(nombre_ingrediente, nombre_receta, self.venta, self.fecha, self.volumen)
 
 
+"""
+--------------------------------------------------------------------------
+Un Producto es un tipo de botella con una combinación única de ingrediente,
+envase, y precio unitario (Preregistro en la app anterior)
+--------------------------------------------------------------------------
+"""
+
+class Producto(models.Model):
+
+	folio 						= models.CharField(max_length=12)
+	ingrediente 				= models.ForeignKey(Ingrediente, related_name='productos', on_delete=models.CASCADE)
+	
+	# Datos del marbete
+	tipo_marbete 				= models.CharField(max_length=255, blank=True)
+	fecha_elaboracion_marbete 	= models.CharField(max_length=255, blank=True)
+	lote_produccion_marbete 	= models.CharField(max_length=255, blank=True)
+	url 						= models.URLField(max_length=255, blank=True)
+
+	# Datos del producto en el marbete
+	nombre_marca 				= models.CharField(max_length=255, blank=True)
+	tipo_producto 				= models.CharField(max_length=255, blank=True)
+	graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
+	capacidad 					= models.IntegerField(blank=True, null=True)
+	origen_del_producto 		= models.CharField(max_length=255, blank=True)
+	fecha_importacion 			= models.CharField(max_length=255, blank=True)
+	nombre_fabricante 			= models.CharField(max_length=255, blank=True)
+	rfc_fabricante 				= models.CharField(max_length=255, blank=True)
+
+	# Registro con app iOS
+	fecha_registro 				= models.DateTimeField(auto_now_add=True)
+	peso_cristal 				= models.IntegerField(blank=True, null=True)
+	precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+
+
+	def __str__(self):
+		nombre_ingrediente = self.ingrediente.nombre
+
+		return '{} - {} - {}'.format(nombre_ingrediente, self.folio, self.peso_cristal, self.precio_unitario)
 
 
