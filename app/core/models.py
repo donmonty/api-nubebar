@@ -58,7 +58,10 @@ class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         """Creates and saves a new User"""
 
-        user = self.model(email=email, **extra_fields)
+        if not email:
+            raise ValueError('El usuario debe proporcionar un email')
+
+        user = self.model(email=self.normalize_email(email), **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
 
@@ -125,3 +128,5 @@ class Ingrediente(models.Model):
 
 	def __str__(self):
 		return '{} - {}'.format(self.nombre, self.codigo)
+
+
