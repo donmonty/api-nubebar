@@ -1,12 +1,37 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.translation import gettext as _
 
 from core import models
+
+
+class UserAdmin(BaseUserAdmin):
+    
+    ordering = ['id']
+    list_display = ['email', 'name']
+    fieldsets = (
+        (None, {'fields': ('email', 'password')}),
+        (_('Datos Personales'), {'fields': ('name',)}),
+        (
+            _('Permisos'),
+            {'fields': ('is_active', 'is_staff', 'is_superuser')}
+        ),
+        (('Sucursales'), {'fields': ('sucursales',)}),
+        (_('Ultimo Acceso'), {'fields': ('last_login',)})
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'password1', 'password2')
+        }),
+    )
+
 
 
 admin.site.register(models.Cliente)
 admin.site.register(models.Sucursal)
 admin.site.register(models.Proveedor)
-admin.site.register(models.User)
+admin.site.register(models.User, UserAdmin)
 admin.site.register(models.Categoria)
 admin.site.register(models.Ingrediente)
 admin.site.register(models.Receta)
