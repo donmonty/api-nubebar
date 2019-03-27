@@ -49,6 +49,25 @@ class Sucursal(models.Model):
 
 """
 --------------------------------------------------------------------------
+Un Proveedor vende las botellas que se ingresan al inventario
+--------------------------------------------------------------------------
+"""
+
+class Proveedor(models.Model):
+
+	nombre 			= models.CharField(max_length=255)
+	razon_social 	= models.CharField(max_length=255, blank=True)
+	rfc 			= models.CharField(max_length=13, blank=True)
+	direccion 		= models.TextField(max_length=500, blank=True)
+	ciudad          = models.CharField(max_length=255, blank=True) 
+	#estado: Quizá conviene crear una tabla para los estados
+
+	def __str__ (self):
+		return self.nombre
+
+
+"""
+--------------------------------------------------------------------------
 El UserManager nos permite crear nuestro custom User
 --------------------------------------------------------------------------
 """
@@ -294,5 +313,61 @@ class Producto(models.Model):
 		nombre_ingrediente = self.ingrediente.nombre
 
 		return '{} - {} - {}'.format(nombre_ingrediente, self.folio, self.peso_cristal, self.precio_unitario)
+
+
+"""
+--------------------------------------------------------------------------
+Botella es una botella física que se da de alta en un almacén y que
+tiene un folio único
+--------------------------------------------------------------------------
+"""
+
+class Botella(models.Model):
+
+    # Estados que puede tener una botella
+    NUEVA = '2'
+    CON_LIQUIDO = '1'
+    VACIA = '0'
+    ESTADOS_BOTELLA = ((NUEVA, 'NUEVA'), (CON_LIQUIDO, 'CON LIQUIDO'), (VACIA, 'VACIA'))
+
+    # Datos del marbete
+    folio                       = models.CharField(max_length=12, unique=True)
+    tipo_marbete                = models.CharField(max_length=255, blank=True)
+    fecha_elaboracion_marbete   = models.CharField(max_length=255, blank=True)
+    lote_produccion_marbete     = models.CharField(max_length=255, blank=True)
+    url                         = models.URLField(max_length=255, blank=True)
+    producto                    = models.ForeignKey(Producto, related_name='botellas', blank=True, null=True, on_delete=models.SET_NULL)
+
+	# Datos del producto en el marbete
+    nombre_marca 				= models.CharField(max_length=255, blank=True)
+    tipo_producto 				= models.CharField(max_length=255, blank=True)
+    graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
+    capacidad 					= models.IntegerField(blank=True, null=True)
+    origen_del_producto 		= models.CharField(max_length=255, blank=True)
+    fecha_importacion 			= models.CharField(max_length=255, blank=True)
+    nombre_fabricante 			= models.CharField(max_length=255, blank=True)
+    rfc_fabricante 				= models.CharField(max_length=255, blank=True)
+    
+    # Datos de registro con scan app iOS
+    estado 						= models.CharField(max_length=1, choices=ESTADOS_BOTELLA, default=NUEVA) # Revisar qué tipo de estado es
+    fecha_registro 				= models.DateTimeField(auto_now_add=True)
+    fecha_baja 					= models.DateTimeField(blank=True, null=True, default=None) # Revisar
+    usuario_alta 				= models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL) # Revisar
+    sucursal 					= models.ForeignKey(Sucursal, related_name='botellas_sucursal', null=True, blank=True, on_delete=models.SET_NULL)
+    almacen 					= models.ForeignKey(Almacen, related_name='botellas_almacen', blank=True, null=True, on_delete=models.SET_NULL)
+    peso_cristal 				= models.IntegerField(blank=True, null=True, default=0)
+    peso_inicial 				= models.IntegerField(blank=True, null=True, default=0)
+    precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+    proveedor 					= models.ForeignKey(Proveedor, related_name='botellas_proveedor', blank=True, null=True, on_delete=models.SET_NULL) # REVISAR valor defautl
+
+
+    def __str__(self):
+        nombre_ingrediente = self.ingrediente.nombre
+        nombre_sucursal = self.sucursal.nombre
+        numero_almacen = self.almacen.numero
+
+        return '{} - {} - {} - {} - {} - {}'.format(self.folio, nombre_ingrediente, self.peso_cristal, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
+
+
 
 

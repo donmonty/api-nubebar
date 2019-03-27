@@ -3,6 +3,11 @@ from django.contrib.auth import get_user_model
 from core import models
 
 
+def usuario_dummy(email='test@foodstack.mx', password='password123'):
+    """ Crea un usuario dummy para los tests"""
+    return get_user_model().objects.create_user(email, password)
+
+
 def cliente_dummy(**params):
         """ Crea un cliente dummy para usar en los tests """
 
@@ -17,6 +22,22 @@ def cliente_dummy(**params):
         defaults.update(params)
 
         return models.Cliente.objects.create(**defaults)
+
+
+def proveedor_dummy(**params):
+    """ Crea un Proveedor dummy para los tests """
+
+    defaults = {
+        'nombre': 'Vinos Hyrule',
+        'razon_social': 'Vinos Hyrule SA de CV',
+        'rfc': 'VHYR190101XYZ',
+        'direccion': 'Lake Hylia 666',
+        'ciudad': 'Hyrule'
+    }
+
+    defaults.update(params)
+
+    return models.Proveedor.objects.create(**defaults)
 
     
 def sucursal_dummy(**params):
@@ -126,6 +147,22 @@ def receta_dummy(**params):
     return models.Receta.objects.create(**defaults)
 
 
+def producto_dummy(**params):
+    """ Crear un Producto dummy para los tests """
+
+    defaults = {
+        'folio': 'Nn0000000001',
+        'ingrediente': ingrediente_dummy(),
+        'url': 'https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Ii0763516458',
+        'capacidad': 750
+    }
+
+    defaults.update(params)
+
+    return models.Producto.objects.create(**defaults)
+        
+
+
 """
 ---------------------------------------------------------
 TESTS PARA LOS MODELOS DE LA APP
@@ -152,6 +189,26 @@ class ModelTests(TestCase):
 
         self.assertEqual(cliente.nombre, nombre)
         self.assertEqual(cliente.rfc, rfc)
+
+
+    def test_crear_proveedor(self):
+        """ Testear que se crea un Proveedor con éxito """
+
+        nombre = 'Vinos Hyrule'
+        razon_social = 'Vinos Hyrule SA de CV'
+        rfc = 'VHYR190101XYZ'
+        direccion = 'Lake Hylia 666'
+        ciudad = 'Hyrule'
+
+        proveedor = models.Proveedor.objects.create(
+            nombre=nombre,
+            razon_social=razon_social,
+            rfc=rfc,
+            direccion=direccion,
+            ciudad=ciudad
+        )
+
+        self.assertEqual(proveedor.nombre, nombre)
 
 
     def test_crear_sucursal(self):
@@ -416,6 +473,49 @@ class ModelTests(TestCase):
 
         self.assertEqual(producto.folio, folio)
         self.assertEqual(productos_ingrediente.count(), 1)
+
+    
+    def test_crear_botella(self):
+        """ Testear que se crea una Botella """
+
+        folio = 'Nn0000000002'
+        producto = producto_dummy()
+        url = 'https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Ii0763516458'
+        capacidad = 750
+        usuario_alta = usuario_dummy()
+        sucursal = sucursal_dummy()
+        almacen = almacen_dummy()
+        proveedor = proveedor_dummy()
+        estado = '2'
+
+        botella = models.Botella.objects.create(
+            folio=folio,
+            producto=producto,
+            url=url,
+            capacidad=capacidad,
+            usuario_alta=usuario_alta,
+            sucursal=sucursal,
+            almacen=almacen,
+            proveedor=proveedor
+        )
+
+        botellas = producto.botellas.all()
+        botellas_sucursal = sucursal.botellas_sucursal.all()
+        botellas_almacen = almacen.botellas_almacen.all()
+        botellas_proveedor = proveedor.botellas_proveedor.all()
+
+        usuario_botella = botella.usuario_alta
+        email_usuario = usuario_botella.email
+
+        self.assertEqual(botella.folio, folio)
+        self.assertEqual(botella.estado, estado)
+        self.assertEqual(botellas.count(), 1)
+        self.assertEqual(botellas_sucursal.count(), 1)
+        self.assertEqual(botellas_almacen.count(), 1)
+        self.assertEqual(botellas_proveedor.count(), 1)
+        self.assertEqual(email_usuario, usuario_alta.email) 
+
+
         
 
 
