@@ -193,6 +193,21 @@ def botella_dummy(**params):
     defaults.update(params)
 
     return models.Botella.objects.create(**defaults)
+
+
+def inspeccion_dummy(**params):
+    """ Crear una Inspeccion dummy para los tests """
+
+    defaults = {
+        'almacen': almacen_dummy(),
+        'sucursal': sucursal_dummy(),
+        'usuario_alta': usuario_dummy(),
+        'usuario_cierre': usuario_dummy(email='test2@foodstack.mx', password='password123')
+    }
+
+    defaults.update(params)
+
+    return models.Inspeccion.objects.create(**defaults)
         
 
 
@@ -574,3 +589,60 @@ class ModelTests(TestCase):
         self.assertEqual(traspasos_sucursal.count(), 1)
         self.assertEqual(traspasos_almacen.count(), 1)
         self.assertEqual(email_usuario, usuario.email)
+
+
+    def test_crear_inspeccion(self):
+        """ Testear que se crea una Inspeccion """
+
+        almacen = almacen_dummy()
+        sucursal = sucursal_dummy()
+        usuario_alta = usuario_dummy()
+        usuario_cierre = usuario_alta
+        
+        models.Inspeccion.objects.create(
+            almacen=almacen,
+            sucursal=sucursal,
+            usuario_alta=usuario_alta,
+            usuario_cierre=usuario_cierre
+        )
+
+        inspecciones_almacen = almacen.inspecciones_almacen.all()
+        inspecciones_sucursal = sucursal.inspecciones_sucursal.all()
+        inspecciones_usuario_alta = usuario_alta.inspecciones_usuario_alta.all()
+        inspecciones_usuario_cierre = usuario_cierre.inspecciones_usuario_cierre.all()
+
+        self.assertEqual(inspecciones_almacen.count(), 1)
+        self.assertEqual(inspecciones_sucursal.count(), 1)
+        self.assertEqual(inspecciones_usuario_alta.count(), 1)
+        self.assertEqual(inspecciones_usuario_cierre.count(), 1)
+
+
+    def test_crear_item_inspeccion(self):
+        """ Testear que se crea un ItemInspeccion con éxito """
+
+        inspeccion = inspeccion_dummy()
+        botella = models.Botella.objects.create(
+            folio = 'Nn0000000002',
+            producto = producto_dummy(),
+            url = 'https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Ii0763516458',
+            capacidad = 750,
+            usuario_alta = usuario_dummy(email='compras@foodstack.mx', password='password123'),
+            sucursal = inspeccion.sucursal,
+            almacen = inspeccion.almacen,
+            proveedor = proveedor_dummy(),
+            estado = '2'
+        )
+        peso_botella = 1212
+
+        item_inspeccion = models.ItemInspeccion.objects.create(
+            inspeccion=inspeccion,
+            botella=botella,
+            peso_botella=peso_botella
+        )
+
+        items_inspeccionados = inspeccion.items_inspeccionados.all()
+        inspecciones_botella = botella.inspecciones_botella.all()
+
+        self.assertEqual(items_inspeccionados.count(), 1)
+        self.assertEqual(inspecciones_botella.count(), 1)
+        self.assertEqual(item_inspeccion.peso_botella, peso_botella)

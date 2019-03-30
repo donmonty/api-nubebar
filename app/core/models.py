@@ -392,3 +392,56 @@ class Traspaso(models.Model):
 		return 'FOLIO: {} - SUCURSAL: {} - ALMACEN: {} - FECHA: {}'.format(folio_botella, nombre_sucursal, numero_almacen, self.fecha)
 
 
+"""
+--------------------------------------------------------------------------
+Una Inspeccion es un evento en el que se inspeccionan varias botellas. Se
+compone de varios ItemInspeccion.
+--------------------------------------------------------------------------
+"""
+
+class Inspeccion(models.Model):
+
+    # Estados que puede tener una Inspeccion:
+    ABIERTA = '0'
+    CERRADA = '1'
+
+    ESTADOS_INSPECCION = ((ABIERTA, 'ABIERTA'), (CERRADA, 'CERRADA'))
+    
+    #tipo_inspeccion
+    almacen             = models.ForeignKey(Almacen, related_name='inspecciones_almacen', on_delete=models.CASCADE)
+    sucursal            = models.ForeignKey(Sucursal, related_name='inspecciones_sucursal', on_delete=models.CASCADE)
+    usuario_alta        = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='inspecciones_usuario_alta', blank=True, null=True, on_delete=models.SET_NULL)
+    usuario_cierre      = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='inspecciones_usuario_cierre', blank=True, null=True, on_delete=models.SET_NULL)
+    fecha_alta 			= models.DateField(auto_now_add=True)
+    timestamp_alta      = models.DateTimeField(auto_now_add=True)
+    fecha_cierre        = models.DateField(auto_now_add=True)
+    timestamp_cierre    = models.DateTimeField(auto_now_add=True)
+    estado              = models.CharField(max_length=1, choices=ESTADOS_INSPECCION, default=ABIERTA)
+
+    def __str__(self):
+        numero_almacen = self.almacen.numero
+        nombre_sucursal = self.sucursal.nombre
+
+        return 'FECHA: {} - SUCURSAL: {} - ALMACEN: {} - ESTADO: {}'.format(self.fecha, nombre_sucursal, numero_almacen, self.estado)
+
+
+"""
+--------------------------------------------------------------------------
+Un ItemInspeccion es la inspección de una botella física.
+--------------------------------------------------------------------------
+"""
+
+class ItemInspeccion(models.Model):
+    
+    inspeccion              = models.ForeignKey(Inspeccion, related_name='items_inspeccionados', on_delete=models.CASCADE)
+    botella                 = models.ForeignKey(Botella, related_name='inspecciones_botella', on_delete=models.CASCADE)
+    peso_botella            = models.IntegerField(null=True, blank=True)
+    timestamp_inspeccion    = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        fecha_inspeccion = self.inspeccion.fecha_alta
+        folio_botella = self.botella.folio
+
+        return 'FECHA: {} - FOLIO: {} - PESO: {}'.format(fecha_inspeccion, folio_botella, self.peso)
+
+
