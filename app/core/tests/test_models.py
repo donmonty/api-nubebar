@@ -599,7 +599,7 @@ class ModelTests(TestCase):
         usuario_alta = usuario_dummy()
         usuario_cierre = usuario_alta
         
-        models.Inspeccion.objects.create(
+        inspeccion = models.Inspeccion.objects.create(
             almacen=almacen,
             sucursal=sucursal,
             usuario_alta=usuario_alta,
@@ -615,6 +615,7 @@ class ModelTests(TestCase):
         self.assertEqual(inspecciones_sucursal.count(), 1)
         self.assertEqual(inspecciones_usuario_alta.count(), 1)
         self.assertEqual(inspecciones_usuario_cierre.count(), 1)
+        self.assertEqual(inspeccion.estado, '0')
 
 
     def test_crear_item_inspeccion(self):
