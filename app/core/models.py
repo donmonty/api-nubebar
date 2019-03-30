@@ -370,4 +370,25 @@ class Botella(models.Model):
 
 
 
+"""
+--------------------------------------------------------------------------
+Un Traspaso sucede cuando se cambia una botella de almacén
+--------------------------------------------------------------------------
+"""
+
+class Traspaso(models.Model):
+
+	botella 	= models.ForeignKey(Botella, related_name='traspasos_botella', on_delete=models.CASCADE)
+	sucursal 	= models.ForeignKey(Sucursal, related_name='traspasos_sucursal', on_delete=models.CASCADE)
+	almacen 	= models.ForeignKey(Almacen, related_name='traspasos_almacen', on_delete=models.CASCADE)
+	fecha 		= models.DateTimeField(auto_now_add=True)
+	usuario 	= models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL)
+
+	def __str__(self):
+		folio_botella = self.botella.folio
+		nombre_sucursal = self.sucursal.nombre
+		numero_almacen = self.almacen.numero
+
+		return 'FOLIO: {} - SUCURSAL: {} - ALMACEN: {} - FECHA: {}'.format(folio_botella, nombre_sucursal, numero_almacen, self.fecha)
+
 

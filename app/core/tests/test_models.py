@@ -3,9 +3,22 @@ from django.contrib.auth import get_user_model
 from core import models
 
 
-def usuario_dummy(email='test@foodstack.mx', password='password123'):
-    """ Crea un usuario dummy para los tests"""
-    return get_user_model().objects.create_user(email, password)
+#def usuario_dummy(email='test@foodstack.mx', password='password123'):
+ #   """ Crea un usuario dummy para los tests"""
+  #  return get_user_model().objects.create_user(email, password)
+
+
+def usuario_dummy(**params):
+    """ Crea un usuario dummy para los tests """
+
+    defaults = {
+        'email': 'test@foodstack.mx',
+        'password': 'password123'
+    }
+
+    defaults.update(params)
+
+    return get_user_model().objects.create_user(**defaults)
 
 
 def cliente_dummy(**params):
@@ -160,6 +173,26 @@ def producto_dummy(**params):
     defaults.update(params)
 
     return models.Producto.objects.create(**defaults)
+
+
+def botella_dummy(**params):
+    """ Crear una Botella dummy para los tests """
+
+    defaults = {
+        'folio': 'Nn0000000002',
+        'producto': producto_dummy(),
+        'url': 'https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Ii0763516458',
+        'capacidad': 750,
+        'usuario_alta': usuario_dummy(),
+        'sucursal': sucursal_dummy(),
+        'almacen': almacen_dummy(),
+        'proveedor': proveedor_dummy(),
+        'estado': '2'
+    }
+
+    defaults.update(params)
+
+    return models.Botella.objects.create(**defaults)
         
 
 
@@ -516,16 +549,28 @@ class ModelTests(TestCase):
         self.assertEqual(email_usuario, usuario_alta.email) 
 
 
-        
+    def test_crear_traspaso(self):
+        """ Testear que se crea un Traspaso """
 
+        botella = botella_dummy()
+        sucursal = sucursal_dummy()
+        almacen = almacen_dummy()
+        usuario = usuario_dummy(email='test2@foodstack.mx', password='password123')
 
+        traspaso = models.Traspaso.objects.create(
+            botella=botella,
+            sucursal=sucursal,
+            almacen=almacen,
+            usuario=usuario
+        )
 
+        traspasos_botellas = botella.traspasos_botella.all()
+        traspasos_sucursal = sucursal.traspasos_sucursal.all()
+        traspasos_almacen = almacen.traspasos_almacen.all()
+        usuario_traspaso = traspaso.usuario
+        email_usuario = usuario_traspaso.email
 
-    
-
-
-
-
-
-    
-
+        self.assertEqual(traspasos_botellas.count(), 1)
+        self.assertEqual(traspasos_sucursal.count(), 1)
+        self.assertEqual(traspasos_almacen.count(), 1)
+        self.assertEqual(email_usuario, usuario.email)
