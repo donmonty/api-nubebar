@@ -328,7 +328,8 @@ class Botella(models.Model):
     NUEVA = '2'
     CON_LIQUIDO = '1'
     VACIA = '0'
-    ESTADOS_BOTELLA = ((NUEVA, 'NUEVA'), (CON_LIQUIDO, 'CON LIQUIDO'), (VACIA, 'VACIA'))
+    PERDIDA = '3'
+    ESTADOS_BOTELLA = ((NUEVA, 'NUEVA'), (CON_LIQUIDO, 'CON LIQUIDO'), (VACIA, 'VACIA'), (PERDIDA, 'PERDIDA'))
 
     # Datos del marbete
     folio                       = models.CharField(max_length=12, unique=True)
