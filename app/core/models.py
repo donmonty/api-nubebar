@@ -37,15 +37,24 @@ class Sucursal(models.Model):
 	razon_social 	= models.CharField(max_length=255, blank=True)
 	rfc 			= models.CharField(max_length=13, blank=True)
 	direccion 		= models.TextField(max_length=500, blank=True)
-	ciudad          = models.CharField(max_length=255, blank=True) 
+	ciudad 			= models.CharField(max_length=255, blank=True) 
 	#estado: Quizá conviene crear una tabla para los estados
 	latitud 		= models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
 	longitud 		= models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
 	codigo_postal 	= models.CharField(max_length=5, blank=True)
+	slug 			= models.CharField(max_length=255, blank=True)
+
+
+	def save(self, *args, **kwargs):
+		nombre_sucursal = self.nombre
+		nombre_split = nombre_sucursal.split(' ')
+		nombre_concat = ('-').join(nombre_split).upper()
+		self.slug = nombre_concat
+		super(Sucursal, self).save(*args, **kwargs)
 
 	def __str__(self):
 		return self.nombre
-
+    
 
 """
 --------------------------------------------------------------------------

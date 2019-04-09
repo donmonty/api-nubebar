@@ -20,5 +20,6 @@ from django.conf import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/users/', include('users.urls'))
+    path('api/users/', include('users.urls')),
+    path('ventas/', include('ventas.urls', namespace='ventas'))
 ]

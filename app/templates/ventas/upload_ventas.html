@@ -1,0 +1,23 @@
+{% extends 'ventas/base.html' %}
+
+
+
+{% block body_block %}
+
+
+<div class="login-form-wide">
+  <h3 class="display-4">{{ sucursal.nombre }}</h3>
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="ventas_csv">Selecciona el Reporte de Ventas</label>
+      <input type="file" class="form-control" name="ventas_csv" id="ventas_csv">
+    </div>
+
+
+    <button type="submit" class="btn btn-primary">Subir Reporte</button>
+  </form>
+</div>
+
+
+{% endblock %}

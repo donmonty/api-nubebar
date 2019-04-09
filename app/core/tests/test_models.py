@@ -285,6 +285,7 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(sucursal), nombre)
+        self.assertEqual(sucursal.slug, 'TACOS-LINK-PROVIDENCIA')
 
 
     def test_create_user_with_email_successful(self):
