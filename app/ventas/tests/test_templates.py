@@ -159,6 +159,75 @@ class TemplateTests(TestCase):
         #mock_parser.assert_called_with(archivo_subido, sucursal)
         
 
+    @patch('ventas.parsers.parser_magno_brasserie.parser')
+    def test_post_reporte_ventas_parser_error(self, mock_parser):
+        """ Testear cuando el parser retorna error al procesar el reporte de ventas """
+
+        # Definimos la respuesta predeterminada del mock_parser
+        mock_parser.return_value = {'df_ventas': 'df_ventas', 'procesado': False}
+        
+        # Creamos una sucursal y el URL para el request
+        sucursal = sucursal_dummy()
+        url = reverse('ventas:upload_ventas', kwargs={'nombre_sucursal': sucursal.slug})
+
+        # Hacemos un mock del archivo de ventas a subir
+        archivo_ventas = SimpleUploadedFile('ventas.csv', b'Este es un archivo CSV')
+
+        # Metemos el archivo de ventas mockeado en un diccionario
+        form_data = {'reporte_ventas': archivo_ventas}
+        form_data_2 = {'ventas_csv': archivo_ventas}
+        data = {}
+        # Creamos un formulario y le asignamos el archivo de ventas mockeado
+        formulario = forms.VentasForm(data, form_data)  # Es necesario definir el parámetro 'data' aunque esté vacío
+
+        # Validamos el formulario
+        formulario.is_valid()
+        print(formulario.errors.as_data()) # Imprimimos cualquier error en la validación
+
+        # Tomamos el archivo de ventas mockeado de el formulario validado y lo imprimimos
+        archivo_subido = formulario.cleaned_data['reporte_ventas']
+        print(type(archivo_subido))
+
+        # Hacemos un POST request con los datos del formulario
+        res = self.client.post(url, form_data_2, follow=True)
+        # Checamos que la pagina se rendereó correctamente
+        self.assertEqual(res.status_code, 200)
+        # Checamos que el valor regresado de mock_parser sea el esperado
+        self.assertEqual(res.context['mensaje_error'], 'Hubo un error al procesar el reporte de ventas.')
+
+
+    def test_archivo_ventas_no_valido(self):
+        """ Testear que el archivo de ventas no es del tipo permitido """
+
+        # Creamos una sucursal y el URL para el request
+        sucursal = sucursal_dummy()
+        url = reverse('ventas:upload_ventas', kwargs={'nombre_sucursal': sucursal.slug})
+
+        # Hacemos un mock del archivo de ventas a subir
+        archivo_ventas = SimpleUploadedFile('ventas.pdf', b'Este es un archivo PDF')
+
+        # Metemos el archivo de ventas mockeado en un diccionario
+        form_data = {'reporte_ventas': archivo_ventas}
+        form_data_2 = {'ventas_csv': archivo_ventas}
+        data = {}
+        # Creamos un formulario y le asignamos el archivo de ventas mockeado
+        formulario = forms.VentasForm(data, form_data)  # Es necesario definir el parámetro 'data' aunque esté vacío
+
+        # Validamos el formulario
+        formulario.is_valid()
+        print(formulario.errors.as_data()) # Imprimimos cualquier error en la validación
+
+        # Tomamos el archivo de ventas mockeado de el formulario validado y lo imprimimos
+        archivo_subido = formulario.cleaned_data['reporte_ventas']
+        print(type(archivo_subido))
+
+        # Hacemos un POST request con los datos del formulario
+        res = self.client.post(url, form_data_2, follow=True)
+        # Checamos que la pagina se rendereó correctamente
+        self.assertEqual(res.status_code, 200)
+        # Checamos que el valor regresado de mock_parser sea el esperado
+        self.assertEqual(res.context['mensaje_error'], 'El reporte de ventas debe estar en formato .CSV o de Excel.')
+
 
 
 

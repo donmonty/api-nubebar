@@ -35,14 +35,26 @@ def upload_reporte_ventas(request, nombre_sucursal):
 
     if request.method == 'POST':
 
+        # Guardamos el reporte de ventas en una variable
+        ventas_csv = request.FILES['ventas_csv']
+
+        # Definimos los tipos de archivos permitidos
+        extensiones_permitidas = ['csv', 'xlsx', 'xls']
+        # Tomamos la extensión del archivo a subir 
+        nombre_archivo = ventas_csv.name
+        tipo_archivo = nombre_archivo.split('.')[1]
+
+        # Checamos que el archivo a subir sea de los tipos permitidos
+        if tipo_archivo not in extensiones_permitidas:
+            mensaje_error = 'El reporte de ventas debe estar en formato .CSV o de Excel.'
+            return render(request, 'ventas/upload_ventas.html', {'mensaje_error': mensaje_error})
+
+
         sucursal = Sucursal.objects.get(slug=nombre_sucursal)
 
         # Creamos nuestra forma con los datos del POST request
         form = forms.VentasForm(request.POST, request.FILES)
 
-        # Guardamos el reporte de ventas en una variable
-        ventas_csv = request.FILES['ventas_csv']
-        
         """
         ------------------------------------------------------
         PARSEAMOS EL REPORTE DE VENTAS
@@ -61,19 +73,19 @@ def upload_reporte_ventas(request, nombre_sucursal):
             mensaje_error = 'Hubo un error al procesar el reporte de ventas.'
             return render(request, 'ventas/upload_ventas.html', {'mensaje_error': mensaje_error})
         
-        # """
-        # --------------------------------------------------------------
-        # REGISTRAMOS LA INFORMACIÓN DE VENTAS Y CONSUMO DE INGREDIENTES
-        # EN LA BASE DE DATOS
-        # --------------------------------------------------------------
-        # """
-        # Si el parser procesa el reporte de ventas y no hay errores, guardamos el resultado 
-        # en una variable
-        #df_ventas = resultado_parser['dataframe']
+        """
+        --------------------------------------------------------------
+        REGISTRAMOS LA INFORMACIÓN DE VENTAS Y CONSUMO DE INGREDIENTES
+        EN LA BASE DE DATOS
+        --------------------------------------------------------------
+        """
+        #Si el parser procesa el reporte de ventas y no hay errores, guardamos el resultado 
+        #en una variable
+        df_ventas = resultado_parser['df_ventas']
 
-        # Tomamos el resultado del parser y lo procesamos para extraer la información de
-        # ventas y consumo de ingredientes y luego guardarla en la base de datos
-        #ventas_consumos(df_ventas, sucursal.id)
+        #Tomamos el resultado del parser y lo procesamos para extraer la información de
+        #ventas y consumo de ingredientes y luego guardarla en la base de datos
+        ventas_consumos.registrar(df_ventas, sucursal)
 
         # Mostramos la página de éxito al usuario
         return render (request, 'ventas/success.html', {'resultado_parser': resultado_parser})
