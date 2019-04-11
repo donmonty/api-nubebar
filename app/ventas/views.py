@@ -3,9 +3,11 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.views import View
 
+from importlib import import_module
 from core.models import Sucursal
 from ventas import forms
 from ventas import parser_ventas
+from ventas import parsers
 from ventas import ventas_consumos
 
 
@@ -15,12 +17,13 @@ def upload(request):
         return render(request, 'ventas/upload.html')
 
 
+
 """
 -----------------------------------------------------------------------------------
 VIEW QUE PERMITE AL USUARIO SUBIR EL REPORTE DE VENTAS DE UNA SUCURSAL
 -----------------------------------------------------------------------------------
 """
-
+@login_required
 def upload_reporte_ventas(request, nombre_sucursal):
 
     if request.method == 'GET':
@@ -45,8 +48,13 @@ def upload_reporte_ventas(request, nombre_sucursal):
         PARSEAMOS EL REPORTE DE VENTAS
         ------------------------------------------------------
         """
+        # Construimos el nombre del parser a importar y lo importamos dinámicamente
+        nombre_parser = 'parser_' + (sucursal.slug).replace('-', '_').lower()
+        parser_ventas = import_module('ventas.parsers.' + nombre_parser)
+
         # Alimentamos el reporte de ventas al parser y lo corremos
-        resultado_parser = parser_ventas.parser(ventas_csv, sucursal)
+        #resultado_parser = parser_ventas.parser(ventas_csv, sucursal)
+        resultado_parser = parser_ventas.parser(ventas_csv)
 
         # Si hay un error con el reporte de ventas, notificar al usuario
         if resultado_parser['procesado'] == False:

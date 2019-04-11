@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from core import models
 from ventas import views
+from ventas import parsers
 from ventas import forms
 from ventas.views import UploadVentas
 
@@ -21,6 +22,19 @@ def usuario_dummy(**params):
     defaults.update(params)
 
     return get_user_model().objects.create_user(**defaults)
+
+
+def super_usuario_dummy(**params):
+    """ Crea un super user para los tests """
+
+    defaults = {
+        'email': 'admin@foodstack.mx',
+        'password': 'password123'
+    }
+
+    defaults.update(params)
+
+    return get_user_model().objects.create_superuser(**defaults)
 
 
 def cliente_dummy(**params):
@@ -43,11 +57,11 @@ def sucursal_dummy(**params):
     """ Crea una Sucursal dummy para usar en nuestros tests """
 
     defaults = {
-        'nombre': 'Tacos Link',
+        'nombre': 'Magno Brasserie',
         'cliente': cliente_dummy(),
-        'razon_social': 'TACOS LINK PROVIDENCIA SA DE CV',
+        'razon_social': 'Magno Brasserie SA de CV',
         'rfc': 'LPRO190101XYZ',
-        'direccion': 'Terranova 666',
+        'direccion': 'Efraín González Luna 666',
         'ciudad': 'Guadalajara',
         'latitud': 20.676,
         'longitud': -103.383,
@@ -70,6 +84,11 @@ class TemplateTests(TestCase):
 
     def setUp(self):
         self.client = Client()
+
+        # Creamos un super usuario dummy y lo logeamos
+        usuario = super_usuario_dummy()
+        self.client.force_login(user=usuario)
+
 
     def test_render_pagina_upload_ventas(self):
 
@@ -100,18 +119,15 @@ class TemplateTests(TestCase):
         self.assertEqual(res.status_code, 200)
 
 
-    @patch('ventas.views.parser_ventas.parser') # Mockeamos el modulo 'parser_ventas' y su método 'parser' 
+    #@patch('ventas.views.parser_ventas.parser') # Mockeamos el modulo 'parser_ventas' y su método 'parser' 
+    @patch('ventas.parsers.parser_magno_brasserie.parser')
     def test_post_reporte_ventas(self, mock_parser):
         """ Testear que se sube el reporte de ventas correctamente """
-
-        #mock_csv_ventas = mock.Mock(name='FileMock', spec=File)
-        #mock_csv_ventas.name = 'ventas.csv'
 
         # Definimos la respuesta predeterminada del mock_parser
         mock_parser.return_value = {'df_ventas': 'df_ventas', 'procesado': True}
         
-        #url = '/ventas/upload/TACOS-LINK/'
-
+        # Creamos una sucursal y el URL pra el request
         sucursal = sucursal_dummy()
         url = reverse('ventas:upload_ventas', kwargs={'nombre_sucursal': sucursal.slug})
 
