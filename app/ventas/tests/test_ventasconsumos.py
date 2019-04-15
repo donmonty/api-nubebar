@@ -136,13 +136,55 @@ class VentasConsumosTests(TestCase):
         # Convertimos el output esperado en un JSON
         #json_output_esperado = json.dumps(output_esperado)
 
+        # Tomamos las ventas registradas por el móculo
         ventas_registradas = models.Venta.objects.all()
         #print(ventas_registradas)
 
+        # Tomamos los consumos registrados por el módulo
+        consumos_registrados = models.ConsumoRecetaVendida.objects.all()
+        print(consumos_registrados)
+
         # Cotejamos que el módulo registró las 4 ventas esperadas
         self.assertEqual(ventas_registradas.count(), 4)
+
+        # Cotejamos que el módulo registró los 4 consumos esperados
+        self.assertEqual(consumos_registrados.count(), 4)
         
         # Cotejamos que el JSON retornado por el módulo sea igual al JSON esperado
         #self.assertEqual(json_resultado, json_output_esperado)
+
+
+    def test_producto_sin_registro(self):
+        """ Testear que se los productos sin registro se manejan de forma adecuada """
+
+        # Creamos un dataset de prueba para el test
+        payload = {
+            'sucursal_id': [self.magno_brasserie.id, self.magno_brasserie.id],
+            'caja_id': [self.caja_1.id, self.caja_1.id],
+            'codigo_pos': ['00050', '00457'],
+            'nombre': ['CARAJILLO', 'APEROL SPRITZ'],
+            'unidades': [3, 1],
+            'importe': [285, 125]
+        }
+
+        df_test = pd.DataFrame(payload)
+
+        # Ejecutamos el módulo 'ventas_consumos' con el dataframe de prueba y guardamos el resultado
+        resultado = ventas_consumos.registrar(df_test, self.magno_brasserie)
+
+        # Tomamos las ventas registradas por el módulo
+        ventas_registradas = models.Venta.objects.all()
+
+        # Cotejamos que el módulo registró 1 sola venta
+        self.assertEqual(ventas_registradas.count(), 1)
+
+        # Cotejamos que el resultado del módulo contiene 1 producto sin registro
+        productos_sin_registro = len(resultado['productos_no_registrados'])
+        #print(productos_sin_registro)
+        self.assertEqual(productos_sin_registro, 1)
+
+
+
+
 
 
