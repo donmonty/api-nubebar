@@ -66,7 +66,7 @@ def upload_reporte_ventas(request, nombre_sucursal):
 
         # Alimentamos el reporte de ventas al parser y lo corremos
         #resultado_parser = parser_ventas.parser(ventas_csv, sucursal)
-        resultado_parser = parser_ventas.parser(ventas_csv)
+        resultado_parser = parser_ventas.parser(ventas_csv, sucursal)
 
         # Si hay un error con el reporte de ventas, notificar al usuario
         if resultado_parser['procesado'] == False:

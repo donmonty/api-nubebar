@@ -3,6 +3,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 
 from django.conf import settings
 
+import datetime
+#from datetime import date
+
 
 """
 --------------------------------------------------------------------------
@@ -235,9 +238,8 @@ class Caja(models.Model):
 
 	def __str__(self):
 		nombre_almacen = self.almacen.nombre
-		nombre_sucursal = self.almacen__sucursal.nombre
 
-		return 'CAJA: {} - BARRA: {} - SUCURSAL: {}'.format(self.numero, nombre_almacen, nombre_sucursal)
+		return 'CAJA: {} - BARRA: {}'.format(self.numero, nombre_almacen)
 
 
 """
@@ -453,5 +455,25 @@ class ItemInspeccion(models.Model):
         folio_botella = self.botella.folio
 
         return 'FECHA: {} - FOLIO: {} - PESO: {}'.format(fecha_inspeccion, folio_botella, self.peso)
+
+
+"""
+------------------------------------------------------------------------------
+Un ProductoSinRegistro es un item del reporte de ventas que no está registrado
+en la base de datos
+------------------------------------------------------------------------------
+"""
+
+class ProductoSinRegistro(models.Model):
+
+    sucursal    = models.CharField(max_length=255, blank=True)
+    codigo_pos  = models.CharField(max_length=255, blank=True)
+    caja        = models.IntegerField(null=True, blank=True)
+    nombre      = models.CharField(max_length=255, blank=True)
+    fecha       = models.DateField(blank=True, null=True, default=datetime.date.today)
+
+    def __str__(self):
+        return 'SUCURSAL: {} - CODIGO: {} - NOMBRE: {}'.format(self.sucursal, self.codigo_pos, self.nombre)
+
 
 

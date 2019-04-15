@@ -1,5 +1,6 @@
 import pandas as pd
 import datetime
+from core.models import Sucursal, Almacen, Caja
 
 
 # def parser(ventas_csv):
@@ -8,10 +9,16 @@ import datetime
     
 #     return({'df_ventas': df_ventas, 'procesado': procesado})
 
-SUCURSAL = 1
-CAJA = 1
 
-def parser(ventas_csv):
+
+def parser(ventas_csv, sucursal):
+
+    # Tomamos los ids de la sucursal y la caja
+    almacen = sucursal.almacenes.all()[0]
+    caja = almacen.cajas.all()[0]
+
+    SUCURSAL_ID = sucursal.id
+    CAJA_ID = caja.id 
 
     try:
     
@@ -41,11 +48,11 @@ def parser(ventas_csv):
 
         # Agregamos columna de Sucursal
         df_copy_01 = df_ventas_raw.copy()
-        df_ventas_sucursal = df_copy_01.reindex(columns = [*df_copy_01.columns.tolist(), 'sucursal_id'], fill_value=SUCURSAL)
+        df_ventas_sucursal = df_copy_01.reindex(columns = [*df_copy_01.columns.tolist(), 'sucursal_id'], fill_value=SUCURSAL_ID)
 
         # Agregamos columna de Caja
         df_copy_02 = df_ventas_sucursal.copy()
-        df_ventas_caja = df_copy_02.reindex(columns = [*df_copy_02.columns.tolist(), 'caja_id'], fill_value=CAJA)
+        df_ventas_caja = df_copy_02.reindex(columns = [*df_copy_02.columns.tolist(), 'caja_id'], fill_value=CAJA_ID)
 
         # Cambiamos el orden de las columnas del dataframe
         df_ventas = df_ventas_caja[['sucursal_id', 'caja_id', 'codigo_pos', 'nombre', 'unidades', 'importe']]

@@ -1,6 +1,9 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from unittest.mock import patch
 from core import models
+#from datetime import date
+import datetime
 
 
 #def usuario_dummy(email='test@foodstack.mx', password='password123'):
@@ -648,3 +651,29 @@ class ModelTests(TestCase):
         self.assertEqual(items_inspeccionados.count(), 1)
         self.assertEqual(inspecciones_botella.count(), 1)
         self.assertEqual(item_inspeccion.peso_botella, peso_botella)
+
+    
+    #@patch('core.models.datetime.date')
+    #def test_crear_producto_sin_registro(self, mock_date):
+    def test_crear_producto_sin_registro(self):
+        """ Testear que se crea un ProductoSinRegistro con éxito """
+
+        #mock_date.today.return_value = datetime.date(2019, 1, 1)
+        
+
+        sucursal = 'TACOS-LINK-PROVIDENCIA'
+        codigo_pos = '00050'
+        caja = 1
+        nombre = 'CARAJILLO'
+
+        producto_sin_registro = models.ProductoSinRegistro.objects.create(
+            sucursal=sucursal,
+            codigo_pos=codigo_pos,
+            caja=caja,
+            nombre=nombre
+        )
+
+        self.assertEqual(producto_sin_registro.sucursal, 'TACOS-LINK-PROVIDENCIA')
+        #self.assertEqual(producto_sin_registro.fecha, datetime.date(2019, 1, 1))
+        
+
