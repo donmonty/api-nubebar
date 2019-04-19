@@ -142,7 +142,7 @@ class VentasConsumosTests(TestCase):
 
         # Tomamos los consumos registrados por el módulo
         consumos_registrados = models.ConsumoRecetaVendida.objects.all()
-        print(consumos_registrados)
+        #print(consumos_registrados)
 
         # Cotejamos que el módulo registró las 4 ventas esperadas
         self.assertEqual(ventas_registradas.count(), 4)
