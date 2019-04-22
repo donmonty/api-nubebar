@@ -4,9 +4,13 @@ from django.core.management import call_command
 from django.db.utils import OperationalError
 from django.test import TestCase
 from django.utils.six import StringIO
+from django.core.management.base import CommandError
+from django.core.exceptions import ObjectDoesNotExist
 
 import pandas as pd
 import json
+import gspread
+from gspread import GSpreadException, SpreadsheetNotFound
 from core import models
 from core.management.commands import productos_google_sheet as pg
 from core.management.commands.add_products import Command
@@ -168,6 +172,23 @@ class CommandTests(TestCase):
         self.assertEqual(output_esperado, output_real)
 
     
+    # @patch('core.management.commands.productos_google_sheet.gspread.Client.open_by_url')
+    # def test_crear_dataframe_productos_error_url(self, mock_open):
+    #     """ Testear cuando hay un error con el URL de la spreadsheet """
+
+    #     mock_open.side_effect = Exception()
+
+    #     #with self.assertRaises(SpreadsheetNotFound):
+    #      #   pg.crear_dataframe_productos(url, client, nombres_sheets)
+    #     #client_falso = SpreadsheetNotFound
+        
+    #     respuesta = pg.crear_dataframe_productos(url, client, nombres_sheets)
+    #     print(respuesta)
+
+    #     self.assertEqual(isinstance(respuesta, Exception), True)
+
+
+    
     def test_crear_recetas_ok(self):
         """ Testear que se crean las recetas del setup con éxito """
 
@@ -204,16 +225,8 @@ class CommandTests(TestCase):
         self.assertEqual(respuesta['errores']['cantidad'], 1)
 
 
-    # @patch('add_products.oauth2client.service_account.ServiceAccountCredentials.from_json_keyfile_name')
-    # @patch('add_products.gspread.authorize')
-    # @patch('add_productos.SHEETS_RECETAS')
-    # def test_add_productos_ok(self, mock_sheets, mock_client, mock_creds):
-    #     """ Testear que se toman los items del API de Google y se registran de forma correcta """
-
- #@patch('core.management.commands.add_products.pg.crear_recetas')
     @patch('core.management.commands.add_products.pg.crear_dataframe_productos')
     @patch('core.management.commands.add_products.ServiceAccountCredentials.from_json_keyfile_name')
-   # @patch.object(Command, 'handle.gspread.authorize', return_value=client)
     @patch('core.management.commands.add_products.gspread.authorize')
     @patch('core.management.commands.add_products.SHEETS_RECETAS')
     def test_add_productos_ok(self, mock_sheets, mock_client, mock_creds, mock_df_items):
@@ -226,19 +239,55 @@ class CommandTests(TestCase):
         #print(mock_creds.return_value)
         mock_client.return_value = client_2 # gspread.authorize
         mock_df_items.return_value = df_licores_botellas
-        #mock_registros.return_value = {'items_registrados': 4, 'errores': {'cantidad': 0, 'items': []}}
-        #print(mock_client.return_value)
-        #mock_df_items.return_value = df_licores_botellas # Command.handle.df_items
-        #respuesta = pg.crear_recetas(df_licores_botellas, sucursal_id)
-        #mock_registros.side_effect = respuesta # Command.handle.registros
 
         out = StringIO()
         
-
         # Ejecutamos el comando utilizando variables dummy/mockeadas
         call_command('add_products', url, sucursal_id, stdout=out)
 
         self.assertIn("Recetas creadas con éxito!", out.getvalue())
+
+
+    def test_add_productos_error_sucursal(self):
+        """ Testear cuando el usuario ingresa una sucursal que no existe """
+        
+        sucursal_id = 999
+        out = StringIO()
+        #mock_command_error.side_effect = True
+        
+        # Ejecutamos el comando utilizando variables dummy/mockeadas
+        # Checamos que se levantan las excepciones esperadas
+        with self.assertRaises((ObjectDoesNotExist, CommandError)):
+            call_command('add_products', url, sucursal_id, stdout=out)
+
+
+    #@patch('core.management.commands.add_products.gspread.authorize')
+    @patch('core.management.commands.add_products.creds')    
+    def test_add_products_error_api_google(self, mock_creds):
+        """ Testear cuando hay un problema con la API de Google Sheets """
+
+        sucursal_id = self.magno_brasserie.id
+        mock_creds.side_effect = Exception('Test Message: Hubo un error con el API de Google Sheets')
+        out = StringIO()
+
+        with self.assertRaises(Exception):
+            call_command('add_products', url, sucursal_id, stdout=out)
+
+
+    # @patch.object(gspread, 'authorize', side_effect=gspread.exceptions.APIError)  
+    # def test_add_products_error_api_google_2(self, mock_authorize):
+    #     """ Testear cuando hay un problema con la API de Google Sheets """
+
+    #     sucursal_id = self.magno_brasserie.id
+    #     #mock_authorize.side_effect = Exception('Test Message: Hubo un error con el API de Google Sheets')
+    #     out = StringIO()
+
+    #     with self.assertRaises(gspread.exceptions.APIError):
+    #         call_command('add_products', url, sucursal_id, stdout=out)
+
+
+
+       
         
 
 

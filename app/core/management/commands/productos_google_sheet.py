@@ -1,5 +1,7 @@
 import pandas as pd
 from core import models
+import gspread
+
 
 
 """
@@ -14,25 +16,38 @@ Inputs:
 """
 def crear_dataframe_productos(url_sheet, client, nombres_sheets):
 
-    # Abrir la spreadsheet
-    sheet = client.open_by_url(url_sheet)
-    lista_dataframes = []
+    # Intentamos abrir la spreadsheet
+    try:
+        #sheet = client.open_by_url(url_sheet)
+        #print(sheet)
+        client.open_by_url(url_sheet)
 
-    # Guardamos los items de cada worksheet en un dataframe
-    for worksheet in nombres_sheets:
-        hoja = sheet.worksheet(worksheet)
-        items = hoja.get_all_records()
-        df_items = pd.DataFrame(items)
-        lista_dataframes.append(df_items)
+    # Si hay un error con el URL de la spreadsheet, retornamos la excepción:
+    except gspread.SpreadsheetNotFound as error:
+        return error
 
-    # Concatenamos los dataframes
-    df_items_todo = pd.concat(lista_dataframes, axis=0)
+    except Exception as error:
+        return error 
 
-    # Convertimos los nombres de los productos a mayúsculas
-    df_items_todo['nombre_producto'] = df_items_todo['nombre_producto'].str.upper()
-    df_items_todo.reset_index(drop=True, inplace=True)
+    else:
+        sheet = client.open_by_url(url_sheet) 
+        lista_dataframes = []
 
-    return df_items_todo
+        # Guardamos los items de cada worksheet en un dataframe
+        for worksheet in nombres_sheets:
+            hoja = sheet.worksheet(worksheet)
+            items = hoja.get_all_records()
+            df_items = pd.DataFrame(items)
+            lista_dataframes.append(df_items)
+
+        # Concatenamos los dataframes
+        df_items_todo = pd.concat(lista_dataframes, axis=0)
+
+        # Convertimos los nombres de los productos a mayúsculas
+        df_items_todo['nombre_producto'] = df_items_todo['nombre_producto'].str.upper()
+        df_items_todo.reset_index(drop=True, inplace=True)
+
+        return df_items_todo
 
 
 """
