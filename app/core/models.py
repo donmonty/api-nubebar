@@ -426,8 +426,8 @@ class Inspeccion(models.Model):
     usuario_cierre      = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='inspecciones_usuario_cierre', blank=True, null=True, on_delete=models.SET_NULL)
     fecha_alta 			= models.DateField(auto_now_add=True)
     timestamp_alta      = models.DateTimeField(auto_now_add=True)
-    fecha_cierre        = models.DateField(auto_now_add=True)
-    timestamp_cierre    = models.DateTimeField(auto_now_add=True)
+    fecha_update        = models.DateField(auto_now=True)
+    timestamp_update    = models.DateTimeField(auto_now=True)
     estado              = models.CharField(max_length=1, choices=ESTADOS_INSPECCION, default=ABIERTA)
 
     def __str__(self):
@@ -448,7 +448,7 @@ class ItemInspeccion(models.Model):
     inspeccion              = models.ForeignKey(Inspeccion, related_name='items_inspeccionados', on_delete=models.CASCADE)
     botella                 = models.ForeignKey(Botella, related_name='inspecciones_botella', on_delete=models.CASCADE)
     peso_botella            = models.IntegerField(null=True, blank=True)
-    timestamp_inspeccion    = models.DateTimeField(auto_now_add=True)
+    timestamp_inspeccion    = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         fecha_inspeccion = self.inspeccion.fecha_alta
