@@ -4,6 +4,7 @@ from unittest.mock import patch
 from core import models
 #from datetime import date
 import datetime
+from freezegun import freeze_time
 
 
 #def usuario_dummy(email='test@foodstack.mx', password='password123'):
@@ -237,6 +238,8 @@ class ModelTests(TestCase):
             direccion=direccion,
             ciudad=ciudad
         )
+        #print('::: STR CLIENTE :::')
+        #print(cliente)
 
         self.assertEqual(cliente.nombre, nombre)
         self.assertEqual(cliente.rfc, rfc)
@@ -258,6 +261,9 @@ class ModelTests(TestCase):
             direccion=direccion,
             ciudad=ciudad
         )
+
+        #print('::: STR PROVEEDOR :::')
+        #print(proveedor)
 
         self.assertEqual(proveedor.nombre, nombre)
 
@@ -287,6 +293,9 @@ class ModelTests(TestCase):
             codigo_postal=codigo_postal
         )
 
+        #print('::: STR SUCURSAL :::')
+        #print(sucursal)
+
         self.assertEqual(str(sucursal), nombre)
         self.assertEqual(sucursal.slug, 'TACOS-LINK-PROVIDENCIA')
 
@@ -315,7 +324,7 @@ class ModelTests(TestCase):
             email=email,
             password=password,
         )
-        print(email.lower())
+        #print(email.lower())
 
         self.assertEqual(user.email, email.lower())
 
@@ -374,6 +383,9 @@ class ModelTests(TestCase):
             factor_peso=factor_peso
         )
 
+        #print('::: STR INGREDIENTE :::')
+        #print(ingrediente)
+
         ingredientes_categoria = categoria.ingredientes.all()
 
         self.assertEqual(ingrediente.codigo, codigo)
@@ -383,7 +395,7 @@ class ModelTests(TestCase):
     def  test_crear_receta(self):
         """ Testear que se construya una Receta con éxito """
 
-        codigo_pos = 'CPWHIS001',
+        codigo_pos = 'CPWHIS001'
         nombre = 'JACK DANIELS DERECHO'
         sucursal = sucursal_dummy()
 
@@ -392,6 +404,9 @@ class ModelTests(TestCase):
             nombre=nombre,
             sucursal=sucursal
         )
+
+        #print('::: STR RECETA :::')
+        #print(receta)
 
         self.assertEqual(receta.codigo_pos, codigo_pos)
         
@@ -408,6 +423,9 @@ class ModelTests(TestCase):
             ingrediente=ingrediente,
             volumen=volumen
         )
+
+        #print('::: STR INGREDIENTE-RECETA :::')
+        #print(ingrediente_receta)
 
         ingredientes = receta.ingredientes.all()
 
@@ -427,6 +445,9 @@ class ModelTests(TestCase):
             sucursal=sucursal
         )
 
+        #print('::: STR ALMACEN :::')
+        #print(almacen)
+
         almacenes_sucursal = sucursal.almacenes.all()
 
         self.assertEqual(almacen.nombre, nombre)
@@ -445,6 +466,9 @@ class ModelTests(TestCase):
             nombre=nombre,
             almacen=almacen
         )
+
+        #print('::: STR CAJA :::')
+        #print(caja)
 
         cajas_almacen = almacen.cajas.all()
 
@@ -470,6 +494,9 @@ class ModelTests(TestCase):
             importe=importe,
             caja=caja
         )
+
+        #print('::: STR VENTA :::')
+        #print(venta)
 
         ventas_receta = receta.ventas_receta.all()
         ventas_sucursal = sucursal.ventas_sucursal.all()
@@ -497,6 +524,9 @@ class ModelTests(TestCase):
             volumen=volumen
         )
 
+        #print('::: STR CONSUMO-RECETA-VENDIDA :::')
+        #print(consumo_receta_vendida)
+
         consumos_ingrediente = ingrediente.consumos_ingrediente.all()
         consumos_receta = receta.consumos_receta.all()
         consumos_venta = venta.consumos_venta.all()
@@ -520,6 +550,9 @@ class ModelTests(TestCase):
             url=url,
             capacidad=capacidad
         )
+
+        #print('::: STR PRODUCTO :::')
+        #print(producto)
 
         productos_ingrediente = ingrediente.productos.all()
 
@@ -550,6 +583,9 @@ class ModelTests(TestCase):
             almacen=almacen,
             proveedor=proveedor
         )
+
+        #print('::: STR BOTELLA :::')
+        #print(botella)
 
         botellas = producto.botellas.all()
         botellas_sucursal = sucursal.botellas_sucursal.all()
@@ -583,6 +619,9 @@ class ModelTests(TestCase):
             usuario=usuario
         )
 
+        #print('::: STR TRASPASO :::')
+        #print(traspaso)
+
         traspasos_botellas = botella.traspasos_botella.all()
         traspasos_sucursal = sucursal.traspasos_sucursal.all()
         traspasos_almacen = almacen.traspasos_almacen.all()
@@ -609,6 +648,8 @@ class ModelTests(TestCase):
             usuario_alta=usuario_alta,
             usuario_cierre=usuario_cierre
         )
+        #print('::: STR INSPECCION :::')
+        #print(inspeccion)
 
         inspecciones_almacen = almacen.inspecciones_almacen.all()
         inspecciones_sucursal = sucursal.inspecciones_sucursal.all()
@@ -645,6 +686,9 @@ class ModelTests(TestCase):
             peso_botella=peso_botella
         )
 
+        #print('::: STR ITEM-INSPECCION :::')
+        #print(item_inspeccion)
+
         items_inspeccionados = inspeccion.items_inspeccionados.all()
         inspecciones_botella = botella.inspecciones_botella.all()
 
@@ -653,8 +697,7 @@ class ModelTests(TestCase):
         self.assertEqual(item_inspeccion.peso_botella, peso_botella)
 
     
-    #@patch('core.models.datetime.date')
-    #def test_crear_producto_sin_registro(self, mock_date):
+    
     def test_crear_producto_sin_registro(self):
         """ Testear que se crea un ProductoSinRegistro con éxito """
 
@@ -666,14 +709,18 @@ class ModelTests(TestCase):
         caja = 1
         nombre = 'CARAJILLO'
 
-        producto_sin_registro = models.ProductoSinRegistro.objects.create(
-            sucursal=sucursal,
-            codigo_pos=codigo_pos,
-            caja=caja,
-            nombre=nombre
-        )
+        with freeze_time("2019-06-01"):
+            producto_sin_registro = models.ProductoSinRegistro.objects.create(
+                sucursal=sucursal,
+                codigo_pos=codigo_pos,
+                caja=caja,
+                nombre=nombre
+            )
+
+        #print('::: STR PRODUCTO NO REGISTRADO :::')
+        #print(producto_sin_registro)
 
         self.assertEqual(producto_sin_registro.sucursal, 'TACOS-LINK-PROVIDENCIA')
-        #self.assertEqual(producto_sin_registro.fecha, datetime.date(2019, 1, 1))
+        self.assertEqual(producto_sin_registro.fecha, datetime.date(2019, 6, 1))
         
 

@@ -29,9 +29,15 @@ class PublicUserApiTest(TestCase):
             'password': 'password123',
             'name': 'Usuario de Prueba'
         }
+        url = reverse('users:create')
+        #print('::: URL :::')
+        #print(url)
 
         res = self.client.post(CREATE_USER_URL, payload)
         user = get_user_model().objects.get(**res.data)
+
+        #print('::: RESPONSE DATA :::')
+        #print(res.data)
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertTrue(user.check_password(payload['password']))
@@ -65,7 +71,15 @@ class PublicUserApiTest(TestCase):
 
         payload = {'email': 'test@foodstack.mx', 'password': 'password123'}
         create_user(**payload)
+        url = reverse('users:token')
+
+        #print('::: URL  :::')
+        #print(url)
+
         res = self.client.post(TOKEN_URL, payload)
+
+        #print('::: RESPONSE DATA :::')
+        #print(res.data)
 
         self.assertIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -99,16 +113,4 @@ class PublicUserApiTest(TestCase):
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
-
-
-    
-    #def test_retrieve_user_unauthorized(self):
-     #   """ Test that authorization is required for users """
-      #  res = self.client.get(ME_URL)
-
-       # self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
-
-
-
-    
 

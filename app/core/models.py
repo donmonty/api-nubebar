@@ -202,7 +202,7 @@ class IngredienteReceta(models.Model):
 		nombre_receta = self.receta.nombre
 		nombre_ingrediente = self.ingrediente.nombre
 		
-		return '{} - {} - {}'.format(nombre_receta, nombre_ingrediente, self.voumen)
+		return 'RECETA: {} - INGREDIENTE: {} - VOLUMEN: {}'.format(nombre_receta, nombre_ingrediente, self.volumen)
 
 
 """
@@ -262,7 +262,7 @@ class Venta(models.Model):
 		nombre_receta = self.receta.nombre
 		nombre_sucursal = self.sucursal.nombre
 
-		return 'RECETA: {} - SUCURSAL: {} - FECHA: {} - UNIDADES: {} - IMPORTE: {} - CAJA: {}'.format(nombre_receta, nombre_sucursal, self.fecha, self.unidades, self.importe, self.caja)
+		return 'RECETA: {} - SUCURSAL: {} - FECHA: {} - UNIDADES: {} - IMPORTE: {} - CAJA: {}'.format(nombre_receta, nombre_sucursal, self.fecha, self.unidades, self.importe, self.caja.nombre)
 
 
 """
@@ -283,7 +283,7 @@ class ConsumoRecetaVendida(models.Model):
 		nombre_ingrediente = self.ingrediente.nombre
 		nombre_receta = self.receta.nombre
 
-		return 'INGREDIENTE: {} - RECETA: {} - VENTA: {} - FECHA: {} - VOLUMEN {}'.format(nombre_ingrediente, nombre_receta, self.venta, self.fecha, self.volumen)
+		return 'INGREDIENTE: {} - RECETA: {} - VENTA: {} - FECHA: {} - VOLUMEN {}'.format(nombre_ingrediente, nombre_receta, self.venta.id, self.fecha, self.volumen)
 
 
 """
@@ -323,7 +323,7 @@ class Producto(models.Model):
 	def __str__(self):
 		nombre_ingrediente = self.ingrediente.nombre
 
-		return '{} - {} - {}'.format(nombre_ingrediente, self.folio, self.peso_cristal, self.precio_unitario)
+		return 'NOMBRE: {} - FOLIO: {} - PESO CRISTAL: {} - PRECIO UNITARIO: {}'.format(nombre_ingrediente, self.folio, self.peso_cristal, self.precio_unitario)
 
 
 """
@@ -334,53 +334,73 @@ tiene un folio único
 """
 
 class Botella(models.Model):
-
-    # Estados que puede tener una botella
-    NUEVA = '2'
-    CON_LIQUIDO = '1'
-    VACIA = '0'
-    PERDIDA = '3'
-    ESTADOS_BOTELLA = ((NUEVA, 'NUEVA'), (CON_LIQUIDO, 'CON LIQUIDO'), (VACIA, 'VACIA'), (PERDIDA, 'PERDIDA'))
-
-    # Datos del marbete
-    folio                       = models.CharField(max_length=12, unique=True)
-    tipo_marbete                = models.CharField(max_length=255, blank=True)
-    fecha_elaboracion_marbete   = models.CharField(max_length=255, blank=True)
-    lote_produccion_marbete     = models.CharField(max_length=255, blank=True)
-    url                         = models.URLField(max_length=255, blank=True)
-    producto                    = models.ForeignKey(Producto, related_name='botellas', blank=True, null=True, on_delete=models.SET_NULL)
-
+	# Estados que puede tener una botella
+	NUEVA = '2'
+	CON_LIQUIDO = '1'
+	VACIA = '0'
+	PERDIDA = '3'
+	ESTADOS_BOTELLA = ((NUEVA, 'NUEVA'), (CON_LIQUIDO, 'CON LIQUIDO'), (VACIA, 'VACIA'), (PERDIDA, 'PERDIDA'))
+	
+	# Datos del marbete
+	folio                       = models.CharField(max_length=12, unique=True)
+	tipo_marbete                = models.CharField(max_length=255, blank=True)
+	fecha_elaboracion_marbete   = models.CharField(max_length=255, blank=True)
+	lote_produccion_marbete     = models.CharField(max_length=255, blank=True)
+	url                         = models.URLField(max_length=255, blank=True)
+	producto                    = models.ForeignKey(Producto, related_name='botellas', blank=True, null=True, on_delete=models.SET_NULL)
+	
 	# Datos del producto en el marbete
-    nombre_marca 				= models.CharField(max_length=255, blank=True)
-    tipo_producto 				= models.CharField(max_length=255, blank=True)
-    graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
-    capacidad 					= models.IntegerField(blank=True, null=True)
-    origen_del_producto 		= models.CharField(max_length=255, blank=True)
-    fecha_importacion 			= models.CharField(max_length=255, blank=True)
-    nombre_fabricante 			= models.CharField(max_length=255, blank=True)
-    rfc_fabricante 				= models.CharField(max_length=255, blank=True)
-    
-    # Datos de registro con scan app iOS
-    estado 						= models.CharField(max_length=1, choices=ESTADOS_BOTELLA, default=NUEVA) # Revisar qué tipo de estado es
-    fecha_registro 				= models.DateTimeField(auto_now_add=True)
-    fecha_baja 					= models.DateTimeField(blank=True, null=True, default=None) # Revisar
-    usuario_alta 				= models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL) # Revisar
-    sucursal 					= models.ForeignKey(Sucursal, related_name='botellas_sucursal', null=True, blank=True, on_delete=models.SET_NULL)
-    almacen 					= models.ForeignKey(Almacen, related_name='botellas_almacen', blank=True, null=True, on_delete=models.SET_NULL)
-    peso_cristal 				= models.IntegerField(blank=True, null=True, default=0)
-    peso_inicial 				= models.IntegerField(blank=True, null=True, default=0)
-    precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
-    proveedor 					= models.ForeignKey(Proveedor, related_name='botellas_proveedor', blank=True, null=True, on_delete=models.SET_NULL) # REVISAR valor defautl
+	nombre_marca 				= models.CharField(max_length=255, blank=True)
+	tipo_producto 				= models.CharField(max_length=255, blank=True)
+	graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
+	capacidad 					= models.IntegerField(blank=True, null=True)
+	origen_del_producto 		= models.CharField(max_length=255, blank=True)
+	fecha_importacion 			= models.CharField(max_length=255, blank=True)
+	nombre_fabricante 			= models.CharField(max_length=255, blank=True)
+	rfc_fabricante 				= models.CharField(max_length=255, blank=True)
+	
+	# Datos de registro con scan app iOS
+	estado 						= models.CharField(max_length=1, choices=ESTADOS_BOTELLA, default=NUEVA) # Revisar qué tipo de estado es
+	fecha_registro 				= models.DateTimeField(auto_now_add=True)
+	fecha_baja 					= models.DateTimeField(blank=True, null=True, default=None) # Revisar
+	usuario_alta 				= models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL) # Revisar
+	sucursal 					= models.ForeignKey(Sucursal, related_name='botellas_sucursal', null=True, blank=True, on_delete=models.SET_NULL)
+	almacen 					= models.ForeignKey(Almacen, related_name='botellas_almacen', blank=True, null=True, on_delete=models.SET_NULL)
+	peso_cristal 				= models.IntegerField(blank=True, null=True, default=0)
+	peso_inicial 				= models.IntegerField(blank=True, null=True, default=0)
+	precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+	proveedor 					= models.ForeignKey(Proveedor, related_name='botellas_proveedor', blank=True, null=True, on_delete=models.SET_NULL)
+	ingrediente 				= models.CharField(max_length=255, blank=True)
+	categoria 					= models.CharField(max_length=255, blank=True)
+
+	def save(self, *args, **kwargs):
+		
+		# Checamos si el campo 'producto' es None
+		if self.producto is not None:
+			# Traemos los valores de 'ingrediente' y 'categoria'
+			producto = self.producto
+			ingrediente = producto.ingrediente
+			nombre_ingrediente = ingrediente.nombre
+			self.ingrediente = nombre_ingrediente
+
+			categoria = ingrediente.categoria
+			nombre_categoria = categoria.nombre
+			self.categoria = nombre_categoria
+			super(Botella, self).save(*args, **kwargs)
+
+		else:
+			self.ingrediente = ''
+			self.categoria = ''
+			super(Botella, self).save(*args, **kwargs)
 
 
-    def __str__(self):
-        nombre_ingrediente = self.ingrediente.nombre
-        nombre_sucursal = self.sucursal.nombre
-        numero_almacen = self.almacen.numero
-
-        return '{} - {} - {} - {} - {} - {}'.format(self.folio, nombre_ingrediente, self.peso_cristal, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
-
-
+	def __str__(self):
+		producto = self.producto
+		ingrediente = producto.ingrediente
+		nombre_ingrediente = ingrediente.nombre
+		nombre_sucursal = self.sucursal.nombre
+		numero_almacen = self.almacen.numero
+		return 'FOLIO: {} - INGREDIENTE: {} - PESO CRISTAL: {} - PRECIO: {} - ESTADO: {} - SUCURSAL: {} - ALMACEN: {}'.format(self.folio, nombre_ingrediente, self.peso_cristal, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
 
 """
 --------------------------------------------------------------------------
@@ -413,28 +433,31 @@ compone de varios ItemInspeccion.
 
 class Inspeccion(models.Model):
 
-    # Estados que puede tener una Inspeccion:
-    ABIERTA = '0'
-    CERRADA = '1'
+	# Tipos de Inspeccion:
+	DIARIA = '0'
+	TOTAL = '1'
+	TIPOS_INSPECCION = ((DIARIA, 'DIARIA'), (TOTAL, 'TOTAL'))
 
-    ESTADOS_INSPECCION = ((ABIERTA, 'ABIERTA'), (CERRADA, 'CERRADA'))
-    
-    #tipo_inspeccion
-    almacen             = models.ForeignKey(Almacen, related_name='inspecciones_almacen', on_delete=models.CASCADE)
-    sucursal            = models.ForeignKey(Sucursal, related_name='inspecciones_sucursal', on_delete=models.CASCADE)
-    usuario_alta        = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='inspecciones_usuario_alta', blank=True, null=True, on_delete=models.SET_NULL)
-    usuario_cierre      = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='inspecciones_usuario_cierre', blank=True, null=True, on_delete=models.SET_NULL)
-    fecha_alta 			= models.DateField(auto_now_add=True)
-    timestamp_alta      = models.DateTimeField(auto_now_add=True)
-    fecha_update        = models.DateField(auto_now=True)
-    timestamp_update    = models.DateTimeField(auto_now=True)
-    estado              = models.CharField(max_length=1, choices=ESTADOS_INSPECCION, default=ABIERTA)
-
-    def __str__(self):
-        numero_almacen = self.almacen.numero
-        nombre_sucursal = self.sucursal.nombre
-
-        return 'FECHA: {} - SUCURSAL: {} - ALMACEN: {} - ESTADO: {}'.format(self.fecha, nombre_sucursal, numero_almacen, self.estado)
+	# Estados que puede tener una Inspeccion:
+	ABIERTA = '0'
+	CERRADA = '1'
+	ESTADOS_INSPECCION = ((ABIERTA, 'ABIERTA'), (CERRADA, 'CERRADA'))
+	tipo 				= models.CharField(max_length=1, choices=TIPOS_INSPECCION, default=DIARIA)
+	almacen             = models.ForeignKey(Almacen, related_name='inspecciones_almacen', on_delete=models.CASCADE)
+	sucursal            = models.ForeignKey(Sucursal, related_name='inspecciones_sucursal', on_delete=models.CASCADE)
+	usuario_alta        = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='inspecciones_usuario_alta', blank=True, null=True, on_delete=models.SET_NULL)
+	usuario_cierre      = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='inspecciones_usuario_cierre', blank=True, null=True, on_delete=models.SET_NULL)
+	fecha_alta 			= models.DateField(auto_now_add=True)
+	timestamp_alta      = models.DateTimeField(auto_now_add=True)
+	fecha_update        = models.DateField(auto_now=True)
+	timestamp_update    = models.DateTimeField(auto_now=True)
+	estado              = models.CharField(max_length=1, choices=ESTADOS_INSPECCION, default=ABIERTA)
+	
+	def __str__(self):
+		numero_almacen = self.almacen.numero
+		nombre_sucursal = self.sucursal.nombre
+		
+		return 'FECHA: {} - SUCURSAL: {} - ALMACEN: {} - ESTADO: {} - TIPO: {}'.format(self.fecha_alta, nombre_sucursal, numero_almacen, self.estado, self.tipo)
 
 
 """
@@ -444,17 +467,17 @@ Un ItemInspeccion es la inspección de una botella física.
 """
 
 class ItemInspeccion(models.Model):
-    
-    inspeccion              = models.ForeignKey(Inspeccion, related_name='items_inspeccionados', on_delete=models.CASCADE)
-    botella                 = models.ForeignKey(Botella, related_name='inspecciones_botella', on_delete=models.CASCADE)
-    peso_botella            = models.IntegerField(null=True, blank=True)
-    timestamp_inspeccion    = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        fecha_inspeccion = self.inspeccion.fecha_alta
-        folio_botella = self.botella.folio
-
-        return 'FECHA: {} - FOLIO: {} - PESO: {}'.format(fecha_inspeccion, folio_botella, self.peso)
+	inspeccion              = models.ForeignKey(Inspeccion, related_name='items_inspeccionados', on_delete=models.CASCADE)
+	botella                 = models.ForeignKey(Botella, related_name='inspecciones_botella', on_delete=models.CASCADE)
+	peso_botella            = models.IntegerField(null=True, blank=True)
+	timestamp_inspeccion    = models.DateTimeField(auto_now=True)
+	inspeccionado 			= models.BooleanField(default=False)
+	
+	def __str__(self):
+		fecha_inspeccion = self.inspeccion.fecha_alta
+		folio_botella = self.botella.folio
+		return 'FECHA: {} - FOLIO: {} - PESO: {}'.format(fecha_inspeccion, folio_botella, self.peso_botella)
 
 
 """

@@ -260,18 +260,18 @@ class CommandTests(TestCase):
         with self.assertRaises((ObjectDoesNotExist, CommandError)):
             call_command('add_products', url, sucursal_id, stdout=out)
 
+    
+    # #@patch('core.management.commands.add_products.gspread.authorize')
+    # @patch('core.management.commands.add_products.creds')    
+    # def test_add_products_error_api_google(self, mock_creds):
+    #     """ Testear cuando hay un problema con la API de Google Sheets """
 
-    #@patch('core.management.commands.add_products.gspread.authorize')
-    @patch('core.management.commands.add_products.creds')    
-    def test_add_products_error_api_google(self, mock_creds):
-        """ Testear cuando hay un problema con la API de Google Sheets """
+    #     sucursal_id = self.magno_brasserie.id
+    #     mock_creds.side_effect = Exception('Test Message: Hubo un error con el API de Google Sheets')
+    #     out = StringIO()
 
-        sucursal_id = self.magno_brasserie.id
-        mock_creds.side_effect = Exception('Test Message: Hubo un error con el API de Google Sheets')
-        out = StringIO()
-
-        with self.assertRaises(Exception):
-            call_command('add_products', url, sucursal_id, stdout=out)
+    #     with self.assertRaises(Exception):
+    #         call_command('add_products', url, sucursal_id, stdout=out)
 
 
     # @patch.object(gspread, 'authorize', side_effect=gspread.exceptions.APIError)  
