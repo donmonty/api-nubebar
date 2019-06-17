@@ -7,9 +7,8 @@ from users.serializers import UserSerializer, AuthTokenSerializer
 
 class CreateUserView(generics.CreateAPIView):
     """ Create a new user """
-    
-    serializer_class = UserSerializer
 
+    serializer_class = UserSerializer
 
 
 class CreateTokenView(ObtainAuthToken):
@@ -17,5 +16,3 @@ class CreateTokenView(ObtainAuthToken):
 
     serializer_class = AuthTokenSerializer
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
-
-    

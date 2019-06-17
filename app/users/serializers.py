@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model, authenticate
-from django.utils.translation import ugettext_lazy as _ 
+from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
+from rest_framework.authtoken.models import Token
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -12,12 +13,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('email', 'password', 'name')
         extra_kwargs = {'password': {'write_only': True, 'min_length': 5}}
 
-    
     def create(self, validated_data):
         """ Create a new user with encrypted password and return it """
         return get_user_model().objects.create_user(**validated_data)
 
-    
     def update(self, instance, validated_data):
         """ Update a user, setting the password correctly and return it """
 
@@ -56,7 +55,9 @@ class AuthTokenSerializer(serializers.Serializer):
             msg = ('No se pudo autenticar con las credenciales presentadas')
             raise serializers.ValidationError(msg, code='authentication')
 
+        # Linea para borrar el Token y devolver siempre uno nuevo
+        # Token.objects.filter(user=user).delete()
+
         attrs['user'] = user
 
         return attrs
-    
