@@ -368,6 +368,7 @@ class Botella(models.Model):
 	almacen 					= models.ForeignKey(Almacen, related_name='botellas_almacen', blank=True, null=True, on_delete=models.SET_NULL)
 	peso_cristal 				= models.IntegerField(blank=True, null=True, default=0)
 	peso_inicial 				= models.IntegerField(blank=True, null=True, default=0)
+	peso_actual 				= models.IntegerField(blank=True, null=True, default=0)
 	precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 	proveedor 					= models.ForeignKey(Proveedor, related_name='botellas_proveedor', blank=True, null=True, on_delete=models.SET_NULL)
 	ingrediente 				= models.CharField(max_length=255, blank=True)

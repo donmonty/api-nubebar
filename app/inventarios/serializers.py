@@ -224,6 +224,7 @@ class BotellaItemInspeccionSerializer(serializers.ModelSerializer):
             'ingrediente',
             'categoria',
             'peso_inicial',
+            'peso_actual',
             'precio_unitario',
             'proveedor',
             'fecha_registro',
@@ -328,6 +329,7 @@ class BotellaUpdateEstadoSerializer(serializers.ModelSerializer):
             'ingrediente',
             'categoria',
             'peso_inicial',
+            'peso_actual',
             'precio_unitario',
             'proveedor',
             'fecha_registro',
@@ -356,10 +358,10 @@ class ItemInspeccionBotellaUpdateSerializer(serializers.ModelSerializer):
         # Actualizamos los datos de nuestro ItemInspeccion
         instance.peso_botella = validated_data.get('peso_botella', instance.peso_botella)
         instance.inspeccionado = True
-        # Actualizamos la instancia de nuestra Botella (estado y peso)
+        # Actualizamos la instancia de nuestra Botella (estado y peso y 'peso_actual')
         botella = instance.botella
         botella.estado = data_botella['estado']
-        botella.peso_inicial = validated_data.get('peso_botella', None)
+        botella.peso_actual = validated_data.get('peso_botella', None)
 
         # Si el estado de la botella es 'VACIA', asignamos la fecha de baja:
         if data_botella['estado'] == '0':
@@ -395,7 +397,7 @@ class ItemInspeccionUpdateSerializer2(serializers.ModelSerializer):
         # Actualizamos la instancia de nuestra Botella (estado y peso)
         botella = instance.botella
         botella.estado = data_botella['estado']
-        botella.peso_inicial = validated_data.get('peso_botella', None)
+        botella.peso_actual = validated_data.get('peso_botella', None)
 
 
 
@@ -508,6 +510,7 @@ class BotellaPostSerializer(serializers.ModelSerializer):
             'almacen',
             'peso_cristal',
             'peso_inicial',
+            'peso_actual',
             'precio_unitario',
             'proveedor',
             'ingrediente',
@@ -566,7 +569,8 @@ class BotellaPostSerializer(serializers.ModelSerializer):
             precio_unitario=precio_unitario,
             proveedor=validated_data.get('proveedor'),
             # Datos obtenidos de la báscula
-            peso_inicial=validated_data.get('peso_inicial')
+            peso_inicial=validated_data.get('peso_inicial'),
+            peso_actual=validated_data.get('peso_inicial')
 
         )
 

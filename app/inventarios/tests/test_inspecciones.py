@@ -2025,7 +2025,7 @@ class InspeccionesTests(TestCase):
         # Checamos que el nuevo peso de nuestro ItemInspeccion sea correcto
         self.assertEqual(item_inspeccion_1.peso_botella, payload['peso_botella'])
         # Checamos que el nuevo peso de la botella sea correcto
-        self.assertEqual(self.botella_licor43.peso_inicial, payload['peso_botella'])
+        self.assertEqual(self.botella_licor43.peso_actual, payload['peso_botella'])
 
     
     #-----------------------------------------------------------------------------
@@ -2116,8 +2116,8 @@ class InspeccionesTests(TestCase):
         self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
         # Checamos que el nuevo peso de la botella declarado en el ItemInspeccion  sea igual al peso del cristal, o sea, 500
         self.assertEqual(item_inspeccion_1.peso_botella, 500)
-        # Checamos que el peso nuevo de la botella sea igual que el peso del cristal
-        self.assertEqual(self.botella_licor43.peso_inicial, 500)
+        # Checamos que el peso nuevo de la botella ('peso_actual') sea igual que el peso del cristal
+        self.assertEqual(self.botella_licor43.peso_actual, 500)
 
     
     #-----------------------------------------------------------------------------
@@ -2165,14 +2165,14 @@ class InspeccionesTests(TestCase):
         self.botella_licor43.refresh_from_db()
         #print('::: DATOS BOTELLA :::')
         #print(self.botella_licor43.estado)
-        #print(self.botella_licor43.peso_inicial)
+        #print(self.botella_licor43.peso_actual)
 
         # Checamos que el nuevo estado de la botella asociada al ItemInspeccion sea correcto
         self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
-        # Checamos que el peso botella nevo sea igual al peso del cristal, o sea, 500
+        # Checamos que el peso botella nevo sea igual a 1288
         self.assertEqual(item_inspeccion_1.peso_botella, 1288)
-        # Checamos que el peso nuevo de la botella sea igual que el peso del cristal
-        self.assertEqual(self.botella_licor43.peso_inicial, 1288)
+        # Checamos que el peso nuevo de la botella sea igual a 1288
+        self.assertEqual(self.botella_licor43.peso_actual, 1288)
 
 
     #-----------------------------------------------------------------------------
