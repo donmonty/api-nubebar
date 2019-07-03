@@ -214,14 +214,20 @@ una o varias cajas.
 
 class Almacen(models.Model):
 
+	# Tipos de almacenes
+	BARRA = '1'
+	BODEGA = '0'
+	TIPOS_ALMACEN = ((BARRA, 'BARRA'), (BODEGA, 'BODEGA'))
+
 	nombre 		= models.CharField(max_length=255, blank=True)
 	numero 		= models.IntegerField(default=1)
 	sucursal 	= models.ForeignKey(Sucursal, related_name='almacenes', on_delete=models.CASCADE)
+	tipo 		= models.CharField(max_length=1, choices=TIPOS_ALMACEN, default=BARRA)
 
 	def __str__(self):
 		nombre_sucursal = self.sucursal.nombre
 
-		return '{} - {}'.format(self.nombre, nombre_sucursal)
+		return 'NOMBRE: {} - SUCURSAL: {} - TIPO: {}'.format(self.nombre, nombre_sucursal, self.tipo)
 
 
 """
