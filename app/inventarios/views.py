@@ -1945,8 +1945,8 @@ def get_servicios_usuario(request):
             'Movimientos': ['Alta Botella', 'Traspaso Botella', 'Baja Botella'],
             'Inspecciones': ['Inventario Total', 'Inventario Rápido'],
             'Consultas': ['Inventario', 'Botella'],
-            'Ingrediente Nuevo': 'Ingrediente Nuevo',
-            'Producto Nuevo': 'Producto Nuevo'        
+            'Ingrediente Nuevo': ['Ingrediente Nuevo'],
+            'Producto Nuevo': ['Producto Nuevo']        
         }
         servicios_user = {
             'Movimientos': ['Alta Botella', 'Traspaso Botella'],
