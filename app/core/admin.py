@@ -6,7 +6,7 @@ from core import models
 
 
 class UserAdmin(BaseUserAdmin):
-    
+
     ordering = ['id']
     list_display = ['email', 'name']
     fieldsets = (
@@ -27,7 +27,6 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
-
 admin.site.register(models.Cliente)
 admin.site.register(models.Sucursal)
 admin.site.register(models.Proveedor)
@@ -43,3 +42,5 @@ admin.site.register(models.ConsumoRecetaVendida)
 admin.site.register(models.Producto)
 admin.site.register(models.Botella)
 admin.site.register(models.ProductoSinRegistro)
+admin.site.register(models.Inspeccion)
+admin.site.register(models.ItemInspeccion)
