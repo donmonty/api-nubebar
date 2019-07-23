@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import datetime
 from django.utils.timezone import make_aware
+from django.core.exceptions import ObjectDoesNotExist
 
 
 def calcular_consumos(inspeccion, fecha_inicial, fecha_final):
@@ -158,3 +159,61 @@ def calcular_consumos(inspeccion, fecha_inicial, fecha_final):
     #print(consumos)
 
     return consumos
+
+
+"""
+-----------------------------------------------------------------------------------
+Esta funcion retorna el las ventas asociadas a una merma y su detalle
+-----------------------------------------------------------------------------------
+"""
+def get_ventas_merma(merma_id):
+
+    # Tomamos el ingrediente a analizar de la merma
+    try:
+        merma = models.MermaIngrediente.objects.get(id=merma_id)
+
+    # Si la merma no existe, retornamos un status de error
+    except ObjectDoesNotExist:
+        data = {
+            'status': '0',
+            'mensaje': 'La merma solicitada no existe.'
+        }
+        return data
+
+    else: 
+        ingrediente = merma.ingrediente
+
+        # Tomamos las ventas asociadas al ingrediente de la MermaIngrediente
+        consumos = models.ConsumoRecetaVendida.objects.filter(
+            ingrediente=ingrediente,
+            fecha__gte=merma.fecha_inicial,
+            fecha__lte=merma.fecha_final,
+            venta__caja__almacen=merma.almacen
+        )
+
+        consumos = consumos.values('venta')
+
+        ventas = models.Venta.objects.filter(id__in=consumos)
+
+        # Agregamos el volumen del ingrediente especificado en la receta del trago
+        sq_volumen_receta = Subquery(models.IngredienteReceta.objects.filter(receta=OuterRef('receta'), ingrediente=ingrediente).values('volumen'))
+        ventas_volumen_receta = ventas.annotate(volumen_receta=sq_volumen_receta)
+
+        # Agregamos el volumen vendido total
+        ventas_volumen_vendido = ventas_volumen_receta.annotate(volumen_vendido=F('unidades') * F('volumen_receta'))
+
+        # Convertimos el queryset en una lista de objectos
+        lista_ventas = list(ventas_volumen_vendido.values('id', 'receta__nombre', 'unidades', 'receta__codigo_pos', 'fecha', 'caja__nombre', 'importe', 'volumen_receta', 'volumen_vendido'))
+
+        # Convertimos las fechas a formato legible
+        for venta in lista_ventas:
+            venta['fecha'] = venta['fecha'].strftime("%d/%m/%Y")
+
+        # Guardamos la info en un objecto, incluyendo el nombre del ingrediente y el status de exito
+        data = {
+            'status': '1',
+            'ingrediente': merma.ingrediente.nombre,
+            'detalle_ventas': lista_ventas
+        }
+
+        return data

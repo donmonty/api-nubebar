@@ -1,5 +1,5 @@
 from django.test import TestCase
-from django.db.models import F, Q, QuerySet, Avg, Count, Sum, Subquery, OuterRef, Exists, Func, ExpressionWrapper, DecimalField, Case, When
+from django.db.models import F, Q, QuerySet, Avg, Count, Sum, Subquery, OuterRef, Exists, Func, ExpressionWrapper, DecimalField, IntegerField, Case, When
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from unittest.mock import patch
@@ -16,6 +16,12 @@ from decimal import Decimal
 import json
 from freezegun import freeze_time
 from analytics import reporte_mermas
+
+from analytics.serializers import (
+    ReporteMermasDetalleSerializer,
+    MermaIngredienteReadSerializer,
+    ReporteMermasListSerializer,
+)
 
 
 
@@ -45,7 +51,7 @@ class AnalyticsTests(TestCase):
         self.barra_1 = models.Almacen.objects.create(nombre='BARRA 1', numero=1, sucursal=self.magno_brasserie)
         self.barra_2 = models.Almacen.objects.create(nombre='BARRA 2', numero=2, sucursal=self.magno_brasserie)
         self.barra_3 = models.Almacen.objects.create(nombre='BARRA 3', numero=3, sucursal=self.magno_brasserie)
-
+        
         # Cajas
         self.caja_1 = models.Caja.objects.create(numero=1, nombre='CAJA 1', almacen=self.barra_1)
         self.caja_2 = models.Caja.objects.create(numero=2, nombre='CAJA 2', almacen=self.barra_2)
@@ -511,6 +517,7 @@ class AnalyticsTests(TestCase):
                 botella=self.botella_maestro_dobel,
                 peso_botella = 800
             )
+ 
 
     #---------------------------------------------------------------------------------------------------------------
     #---------------------------------------------------------------------------------------------------------------
@@ -726,9 +733,9 @@ class AnalyticsTests(TestCase):
 
     #----------------------------------------------------------------------
     #----------------------------------------------------------------------
-    def test_reporte_ok(self):
+    def test_script_reporte_ok(self):
         """
-        Testear que el reporte de mermas funciona OK
+        Testear que el script de reporte de mermas funciona OK
         """
 
         # Actalizamos los datos de la botella JW Black 3 y JW Black 4 para simular su traspaso a la BARRA 1
@@ -833,10 +840,10 @@ class AnalyticsTests(TestCase):
 
     #----------------------------------------------------------------------
     #----------------------------------------------------------------------
-    def test_reporte_barra3_ok(self):
+    def test_script_reporte_barra3_ok(self):
         """
         ----------------------------------------------------------------------
-        Testear que el reporte de mermas para la Barra 3 funciona OK
+        Testear que el script de reporte de mermas para la Barra 3 funciona OK
 
         - Las inspecciones de la Barra 3 fueron hechas en dias consecutivos
 
@@ -852,3 +859,717 @@ class AnalyticsTests(TestCase):
         # Checamos el consumo de ventas y consumo real de MAESTRO DOBEL
         self.assertEqual(self.cr_maestro_dobel.volumen, consumos[0][1]['consumo_ventas'])   
         self.assertAlmostEqual(float(consumos[0][2]['consumo_real']), 432.60)
+
+    
+    #----------------------------------------------------------------------
+    @patch('analytics.reporte_mermas.calcular_consumos')
+    def test_crear_reporte_mermas_ok(self, mock_consumos):
+
+        """
+        ----------------------------------------------------------------------
+        Testear la creacion correcta de un Reporte de Mermas
+        ----------------------------------------------------------------------
+        """
+        mock_consumos.return_value = [
+            (self.licor_43, {'consumo_ventas': Decimal(60)}, {'consumo_real': Decimal(90)}),
+            (self.herradura_blanco, {'consumo_ventas': Decimal(60)}, {'consumo_real': Decimal(90)}),
+            (self.jw_black, {'consumo_ventas': Decimal(60)}, {'consumo_real': Decimal(90)})
+        ]
+
+        merma_licor43 = mock_consumos.return_value[0][1]['consumo_ventas'] - mock_consumos.return_value[0][2]['consumo_real']
+        porcentaje_licor43 = (merma_licor43 / mock_consumos.return_value[0][1]['consumo_ventas']) * 100
+
+        print('::: MERMA LICOR 43 :::')
+        print(merma_licor43)
+
+        print('::: PORCENTAJE LICOR 43 :::')
+        print(porcentaje_licor43)
+
+        payload = {
+            'inspeccion': self.inspeccion_2.id,
+            #'almacen': self.barra_1.id
+        }
+
+        # Construimos el request
+        url = reverse('analytics:crear-reporte-mermas')
+        response = self.client.post(url, payload)
+
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+
+        # Checamos los atributos del reporte de mermas creado
+        reporte_creado = models.ReporteMermas.objects.get(id=response.data['id'])
+
+        print('::: STR REPORTE CREADO :::')
+        print(reporte_creado)
+
+        self.assertEqual(reporte_creado.almacen.id, self.barra_1.id)
+        self.assertEqual(reporte_creado.inspeccion.id, payload['inspeccion'])
+        self.assertEqual(reporte_creado.fecha_inicial, self.inspeccion_1.fecha_alta)
+        self.assertEqual(reporte_creado.fecha_final, self.inspeccion_2.fecha_alta)
+
+        # Checamos las mermas del reporte
+        mermas = reporte_creado.mermas_reporte.all()
+
+        print('::: MOCK DATA :::')
+        print(mock_consumos.return_value[0][0].nombre)
+
+        print('::: DATA MERMAS :::')
+        print(mermas[0].ingrediente.nombre)
+        print(mermas[0].almacen.nombre)
+        print(mermas[0].fecha_inicial)
+        print(mermas[0].fecha_final)
+        print(mermas[0].merma)
+        print(mermas[0].porcentaje)
+
+        # Checamos que haya 3 instancias de MermaIngrediente asociadas al reporte
+        self.assertEqual(mermas.count(), 3)
+
+        # Checamos los consumos de MermaIngrediente 1
+        self.assertEqual(mermas[0].ingrediente.id, mock_consumos.return_value[0][0].id)
+        self.assertAlmostEqual(mermas[0].consumo_ventas, mock_consumos.return_value[0][1]['consumo_ventas'])
+        self.assertAlmostEqual(mermas[0].consumo_real, mock_consumos.return_value[0][2]['consumo_real'])
+
+        # Checamos la merma y porcentaje de MermaIngrediente 1
+        self.assertAlmostEqual(mermas[0].merma, merma_licor43)
+        self.assertAlmostEqual(mermas[0].porcentaje, porcentaje_licor43)
+
+        # Checamos el resto de atributos de MermaIngrediente 1
+        self.assertEqual(mermas[0].almacen.id, self.barra_1.id)
+        self.assertEqual(mermas[0].fecha_inicial, self.inspeccion_1.fecha_alta)
+        self.assertEqual(mermas[0].fecha_final, self.inspeccion_2.fecha_alta)
+
+
+    #----------------------------------------------------------------------
+    @patch('analytics.reporte_mermas.calcular_consumos')
+    def test_crear_reporte_mermas_unica_inspeccion(self, mock_consumos):
+
+        """
+        ----------------------------------------------------------------------
+        Testear la creacion correcta de un Reporte de Mermas cuando solo hay
+        una Inspeccion.
+        En estos casos: 'fecha_inicial' = fecha de registro de la primera
+        botella registrada en el almacen 
+        ----------------------------------------------------------------------
+        """
+        mock_consumos.return_value = [
+            (self.maestro_dobel, {'consumo_ventas': Decimal(60)}, {'consumo_real': Decimal(90)}),
+        ]
+        
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        # Creamos una botella para la BARRA 4
+        with freeze_time("2019-06-01 03:21:34"):
+
+            botella_maestro_dobel_2 = models.Botella.objects.create(
+                folio='Nn1647414424',
+                producto=self.producto_maestro_dobel,
+                url='https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Nn1647414424',
+                capacidad=750,
+                usuario_alta=self.usuario,
+                sucursal=self.magno_brasserie,
+                almacen=barra_4,
+                proveedor=self.vinos_america,
+                peso_cristal=500,
+                peso_inicial=1212,
+                peso_actual=1212,
+            )
+
+        #-------------------------------------------------------------------------------
+        # Creamos una Inspeccion para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+        payload = {
+            'inspeccion': inspeccion_barra4_1.id,
+        }
+
+        # Construimos el request
+        url = reverse('analytics:crear-reporte-mermas')
+        response = self.client.post(url, payload)
+
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+        print(response.status_code)
+
+
+        # Checamos los atributos del reporte de mermas creado
+        reporte_creado = models.ReporteMermas.objects.get(id=response.data['id'])
+
+        print('::: STR REPORTE CREADO :::')
+        print(reporte_creado)
+
+        self.assertEqual(reporte_creado.almacen.id, barra_4.id)
+        self.assertEqual(reporte_creado.inspeccion.id, payload['inspeccion'])
+        self.assertEqual(reporte_creado.fecha_inicial, botella_maestro_dobel_2.fecha_registro.date())
+        self.assertEqual(reporte_creado.fecha_final, inspeccion_barra4_1.fecha_alta)
+
+
+    #----------------------------------------------------------------------
+    @patch('analytics.reporte_mermas.calcular_consumos')
+    def test_crear_reporte_mermas_cero_botellas(self, mock_consumos):
+
+        """
+        ----------------------------------------------------------------------
+        Testear que no se pueda crear un Reporte de Mermas cuando no hay
+        botellas registradas 
+        ----------------------------------------------------------------------
+        """
+        mock_consumos.return_value = [
+            (self.maestro_dobel, {'consumo_ventas': Decimal(0)}, {'consumo_real': Decimal(0)}),
+        ]
+        
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        #-------------------------------------------------------------------------------
+        # Creamos una Inspeccion para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+        payload = {
+            'inspeccion': inspeccion_barra4_1.id,
+        }
+
+        # Construimos el request
+        url = reverse('analytics:crear-reporte-mermas')
+        response = self.client.post(url, payload)
+
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+        print(response.status_code)
+
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+    #----------------------------------------------------------------------
+    def test_crear_reporte_mermas_reporte_existente(self):
+
+        """
+        ----------------------------------------------------------------------
+        Testear que no se pueda crear un Reporte de Mermas cuando la inspeccion
+        ya cuenta con un reporte (reportes de mermas duplicados)
+        ----------------------------------------------------------------------
+        """
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        #-------------------------------------------------------------------------------
+        # Creamos una Inspeccion para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+        # Creamos un reporte de mermas para la inspeccion
+        reporte_mermas_barra4 = models.ReporteMermas.objects.create(
+            inspeccion=inspeccion_barra4_1,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta
+        )
+
+        # Construimos el request
+        payload = {
+            'inspeccion': inspeccion_barra4_1.id,
+        }
+        url = reverse('analytics:crear-reporte-mermas')
+        response = self.client.post(url, payload)
+
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+        print(response.status_code)
+
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+    #----------------------------------------------------------------------------------
+    def test_get_reporte_mermas(self):
+        """
+        ----------------------------------------------------------------------
+        Test para el view 'get_reporte_mermas'
+        Testear que se puede consultar el detalle de un reporte de mermas
+        ----------------------------------------------------------------------
+        """
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        # Creamos una Inspeccion para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+        # Creamos un reporte de mermas para la inspeccion
+        reporte_mermas_barra4 = models.ReporteMermas.objects.create(
+            inspeccion=inspeccion_barra4_1,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta
+        )
+
+        # Creamos una MermaIngrediente para el reporte
+        merma_ingrediente_1 = models.MermaIngrediente.objects.create(
+            ingrediente=self.licor_43,
+            reporte=reporte_mermas_barra4,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta,
+            consumo_ventas=60,
+            consumo_real=90
+        )
+
+        # Creamos una MermaIngrediente para el reporte
+        merma_ingrediente_2 = models.MermaIngrediente.objects.create(
+            ingrediente=self.maestro_dobel,
+            reporte=reporte_mermas_barra4,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta,
+            consumo_ventas=60,
+            consumo_real=90
+        )
+
+        #---------------------------------------------------------------------
+
+        # Construimos el request
+        url = reverse('analytics:get-reporte-mermas', args=[reporte_mermas_barra4.id])
+        response = self.client.get(url)
+
+        json_response = json.dumps(response.data)
+
+        # Serializamos el reporte de mermas
+        serializer = ReporteMermasDetalleSerializer(reporte_mermas_barra4)
+
+        print('::: RESPONSE DATA :::')
+        print(json_response)
+
+        # Checamos que el request sea exitoso
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Comparamos los datos del response con los del serializer
+        self.assertEqual(serializer.data, response.data)
+
+
+    #----------------------------------------------------------------------------------
+    def test_get_lista_reportes_mermas(self):
+        """
+        ----------------------------------------------------------------------
+        Test para el view 'get_lista_reportes_mermas'
+        Testear el display de la lista de reportes de mermas de un almacen
+        ----------------------------------------------------------------------
+        """
+
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        # Creamos una primera Inspeccion para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+            # Creamos un reporte de mermas para la primera inspeccion
+            reporte_mermas_barra4_1 = models.ReporteMermas.objects.create(
+                inspeccion=inspeccion_barra4_1,
+                almacen=barra_4,
+                fecha_inicial=datetime.date(2019, 6, 2),
+                fecha_final=inspeccion_barra4_1.fecha_alta
+            )
+
+        # Creamos una segunda Inspeccion para la BARRA 4
+        with freeze_time("2019-06-04"):
+            
+            inspeccion_barra4_2 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+            # Creamos un reporte de mermas para la segunda inspeccion
+            reporte_mermas_barra4_2 = models.ReporteMermas.objects.create(
+                inspeccion=inspeccion_barra4_2,
+                almacen=barra_4,
+                fecha_inicial=inspeccion_barra4_1.fecha_alta,
+                fecha_final=inspeccion_barra4_2.fecha_alta
+            )
+
+        # Construimos el request
+        url = reverse('analytics:get-lista-reportes-mermas', args=[barra_4.id])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+
+        print('RESPONSE DATA')
+        print(json_response)
+
+        queryset = models.ReporteMermas.objects.filter(almacen=barra_4)
+        serializer = ReporteMermasListSerializer(queryset, many=True)
+
+        print('SERIALIZER DATA')
+        print(json.dumps(serializer.data))
+
+        # Checamos el status del response
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Comparamos los datos del serializer contra los del response
+        self.assertEqual(queryset[0].id, response.data[1]['id'])
+        self.assertEqual(queryset[1].id, response.data[0]['id'])
+
+
+    #----------------------------------------------------------------------------------
+    def test_get_lista_reportes_mermas_error(self):
+        """
+        ----------------------------------------------------------------------
+        Test para el view 'get_lista_reportes_mermas'
+        Testear cuando un usuario no puede acceder a reportes de mermas de otras
+        sucursales que no tiene asignadas
+        ----------------------------------------------------------------------
+        """
+
+        # Creamos una nueva sucursal para el test
+        atomic_thai = models.Sucursal.objects.create(nombre='ATOMIC-THAI', cliente=self.operadora_magno)
+
+        # Creamos una barra nueva para el test
+        barra_1_atomic = models.Almacen.objects.create(nombre='BARRA 1', numero=1, sucursal=atomic_thai)
+
+        # Creamos una primera Inspeccion para la BARRA 1
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_1 = models.Inspeccion.objects.create(
+                almacen=barra_1_atomic,
+                sucursal=atomic_thai,
+                usuario_alta=self.usuario_2,
+                usuario_cierre=self.usuario_2,
+                estado='1' # CERRADA
+            )
+
+            # Creamos un reporte de mermas para la primera inspeccion
+            reporte_mermas_1 = models.ReporteMermas.objects.create(
+                inspeccion=inspeccion_1,
+                almacen=barra_1_atomic,
+                fecha_inicial=datetime.date(2019, 6, 2),
+                fecha_final=inspeccion_1.fecha_alta
+            )
+
+        # Construimos el request
+        url = reverse('analytics:get-lista-reportes-mermas', args=[barra_1_atomic.id])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+
+        print('RESPONSE DATA')
+        print(json_response)
+        print(response.status_code)
+
+
+
+        # Checamos el status del response
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Checamos el mensaje del response
+        mensaje = 'No estas autorizado para consultar reportes de esta sucursal.'
+        self.assertEqual(response.data['mensaje'], mensaje)
+
+    
+    #----------------------------------------------------------------------------------
+    def test_queryset_detalle_ventas(self):
+        """
+        ----------------------------------------------------------------------
+        Testear que el queryset que obtiene el desglose de ventas por ingrediente
+        funciona OK
+        ----------------------------------------------------------------------
+        """
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        # Creamos una caja nueva para el test
+        caja_4 = models.Caja.objects.create(numero=4, nombre='CAJA 4', almacen=barra_4)
+
+        with freeze_time("2019-06-02"):
+            # Manejamos el tema del naive datetime
+            naive_datetime = datetime.datetime.now()
+            aware_datetime = make_aware(naive_datetime)
+
+            # Ventas
+            venta_licor43_shot = models.Venta.objects.create(
+                receta=self.trago_licor_43,
+                sucursal=self.magno_brasserie,
+                #fecha=self.ayer,
+                fecha=aware_datetime,
+                unidades=1,
+                importe=120,
+                caja=caja_4
+            )
+
+            # Consumos Recetas Vendidas
+            cr_licor43_shot = models.ConsumoRecetaVendida.objects.create(
+                ingrediente=self.licor_43,
+                receta=self.trago_licor_43,
+                venta=venta_licor43_shot,
+                #fecha=self.ayer,
+                fecha=aware_datetime,
+                volumen=60
+            )
+
+
+        # Creamos una Inspeccion para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+        # Creamos un reporte de mermas para la inspeccion
+        reporte_mermas_barra4 = models.ReporteMermas.objects.create(
+            inspeccion=inspeccion_barra4_1,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta
+        )
+
+        # Creamos una MermaIngrediente para el reporte
+        merma_ingrediente_1 = models.MermaIngrediente.objects.create(
+            ingrediente=self.licor_43,
+            reporte=reporte_mermas_barra4,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta,
+            consumo_ventas=60,
+            consumo_real=90
+        )
+
+        #-----------------------------------------------------------------------------------
+
+        # Tomamos las ventas asociadas al ingrediente de la MermaIngrediente
+        consumos = models.ConsumoRecetaVendida.objects.filter(
+            ingrediente=self.licor_43,
+            fecha__gte=merma_ingrediente_1.fecha_inicial,
+            fecha__lte=merma_ingrediente_1.fecha_final,
+            venta__caja__almacen=merma_ingrediente_1.almacen
+        )
+
+        print('::: CONSUMOS :::')
+        print(consumos.values())
+
+        consumos = consumos.values('venta')
+
+        ventas = models.Venta.objects.filter(id__in=consumos)
+
+        print('::: VENTAS :::')
+        print(ventas.values())
+
+        # Agregamos el volumen del ingrediente especificado en la receta del trago
+        sq_volumen_receta = Subquery(models.IngredienteReceta.objects.filter(receta=OuterRef('receta'), ingrediente=self.licor_43).values('volumen'))
+        ventas_volumen_receta = ventas.annotate(volumen_receta=sq_volumen_receta)
+
+        # Agregamos el volumen vendido total
+        ventas_volumen_vendido = ventas_volumen_receta.annotate(volumen_vendido=F('unidades') * F('volumen_receta'))
+
+        print('::: VENTAS ANOTADAS :::')
+        print(ventas_volumen_vendido.values())
+
+        lista_ventas = list(ventas_volumen_vendido.values('id', 'receta__nombre', 'unidades', 'receta__codigo_pos', 'fecha', 'caja__nombre', 'importe', 'volumen_receta', 'volumen_vendido'))
+
+        print('::: DATA VENTAS :::')
+        print(lista_ventas)
+
+        self.assertEqual(1, 1)
+
+
+    #----------------------------------------------------------------------------------
+    def test_script_detalle_ventas_ok(self):
+        """
+        ----------------------------------------------------------------------
+        Testear que el script que calcula el detalle de ventas funciona OK
+        ----------------------------------------------------------------------
+        """
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        # Creamos una caja nueva para el test
+        caja_4 = models.Caja.objects.create(numero=4, nombre='CAJA 4', almacen=barra_4)
+
+        with freeze_time("2019-06-02"):
+            # Manejamos el tema del naive datetime
+            naive_datetime = datetime.datetime.now()
+            aware_datetime = make_aware(naive_datetime)
+
+            # Ventas
+            venta_licor43_shot = models.Venta.objects.create(
+                receta=self.trago_licor_43,
+                sucursal=self.magno_brasserie,
+                #fecha=self.ayer,
+                fecha=aware_datetime,
+                unidades=1,
+                importe=120,
+                caja=caja_4
+            )
+
+            # Consumos Recetas Vendidas
+            cr_licor43_shot = models.ConsumoRecetaVendida.objects.create(
+                ingrediente=self.licor_43,
+                receta=self.trago_licor_43,
+                venta=venta_licor43_shot,
+                #fecha=self.ayer,
+                fecha=aware_datetime,
+                volumen=60
+            )
+
+
+        # Creamos una Inspeccion para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+        # Creamos un reporte de mermas para la inspeccion
+        reporte_mermas_barra4 = models.ReporteMermas.objects.create(
+            inspeccion=inspeccion_barra4_1,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta
+        )
+
+        # Creamos una MermaIngrediente para el reporte
+        merma_ingrediente_1 = models.MermaIngrediente.objects.create(
+            ingrediente=self.licor_43,
+            reporte=reporte_mermas_barra4,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 2),
+            fecha_final=inspeccion_barra4_1.fecha_alta,
+            consumo_ventas=60,
+            consumo_real=90
+        )
+
+        #-----------------------------------------------------------
+
+        # Ejecutamos el script
+        detalle_ventas = reporte_mermas.get_ventas_merma(merma_ingrediente_1.id)
+
+        print('::: DETALLE VENTAS :::')
+        print(detalle_ventas)
+
+        
+        # Checamos que el status del reporte sea exitoso
+        self.assertEqual(detalle_ventas['status'], '1')
+
+        # Checamos que el iingrediente sea el corecto
+        self.assertEqual(detalle_ventas['ingrediente'], self.licor_43.nombre)
+
+        # Checamos que el numero de ventas sea correcto
+        self.assertEqual(len(detalle_ventas['detalle_ventas']), 1)
+
+        # Checamos que el producto vendido sea el correcto
+        self.assertEqual(detalle_ventas['detalle_ventas'][0]['id'], venta_licor43_shot.id)
+
+        # Checamos que el volumen de la receta sea el correcto
+        self.assertEqual(detalle_ventas['detalle_ventas'][0]['volumen_receta'], self.ir_licor_43.volumen)
+
+        # Checamos que el volumen vendido sea el correcto
+        self.assertEqual(detalle_ventas['detalle_ventas'][0]['volumen_vendido'], self.ir_licor_43.volumen * venta_licor43_shot.unidades)
+
+
+    #----------------------------------------------------------------------------------
+    def test_script_detalle_ventas_error(self):
+        """
+        ----------------------------------------------------------------------
+        Testear cuando el script de detalle de ventas recibe una merma
+        que no existe
+        ----------------------------------------------------------------------
+        """
+
+        # Ejecutamos el script con id de merma inexistente
+        detalle_ventas = reporte_mermas.get_ventas_merma(999)
+
+        self.assertEqual(detalle_ventas['status'], '0')
+
+    
+    #----------------------------------------------------------------------------------
+    @patch('analytics.reporte_mermas.get_ventas_merma')
+    def test_get_detalle_ventas_merma_ok(self, mock_ventas):
+        """
+        ----------------------------------------------------------------------
+        Test para el endpoint 'get_detalle_ventas_mermas'
+        ----------------------------------------------------------------------
+        """
+        # Simulamos la respuesta del metodo 'get_ventas_merma' del modulo reporte_mermas.py
+        mock_ventas.return_value = {'status': '1'}
+
+        # Construimos el request
+        url = reverse('analytics:get-detalle-ventas-merma', args=[1])
+        response = self.client.get(url)
+
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+
+
+        self.assertEqual(response.data['status'], '1')
+
+
+    #----------------------------------------------------------------------------------
+    @patch('analytics.reporte_mermas.get_ventas_merma')
+    def test_get_detalle_ventas_merma_error(self, mock_ventas):
+        """
+        ----------------------------------------------------------------------
+        Test para el endpoint 'get_detalle_ventas_mermas' cuando el script
+        detecta un error
+        ----------------------------------------------------------------------
+        """
+        # Simulamos la respuesta del metodo 'get_ventas_merma' del modulo reporte_mermas.py
+        mock_ventas.return_value = {'status': '0', 'mensaje': 'La merma solicitada no existe.'}
+
+        # Construimos el request 
+        url = reverse('analytics:get-detalle-ventas-merma', args=[1])
+        response = self.client.get(url)
+
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+
+
+        # Checamos que el status del objeto del response sea cero
+        self.assertEqual(response.data['status'], '0')
+
+        # Checamos el status del response
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+

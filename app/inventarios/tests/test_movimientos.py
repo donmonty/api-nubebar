@@ -557,7 +557,7 @@ class MovimientosTests(TestCase):
             'nombre_marca': 'LICOR 43',
             'tipo_producto': 'Licores y Cremas más de 20% Alc. Vol.',
             'graduacion_alcoholica': '31',
-            'capacidad': '750',
+            #'capacidad': '750',
             'origen_del_producto': 'REINO DE ESPAÑA',
             'fecha_importacion': '08-08-2018',
             'nombre_fabricante': 'CASA CUERVO, S.A. DE C.V.',

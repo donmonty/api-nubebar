@@ -540,6 +540,7 @@ class BotellaPostSerializer(serializers.ModelSerializer):
 
         peso_cristal = producto_asignado.peso_cristal
         precio_unitario = producto_asignado.precio_unitario
+        capacidad = producto_asignado.capacidad
         #proveedor = producto_asignado.proveedor
 
         # Creamos la botella
@@ -556,7 +557,8 @@ class BotellaPostSerializer(serializers.ModelSerializer):
             nombre_marca=validated_data.get('nombre_marca'),
             tipo_producto=validated_data.get('tipo_producto'),
             graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
-            capacidad=validated_data.get('capacidad'),
+            #capacidad=validated_data.get('capacidad'),
+            capacidad=capacidad, # Tomamos la capacidad directamente del Producto porque a veces la info del marbete es erronea
             origen_del_producto=validated_data.get('origen_del_producto'),
             fecha_importacion=validated_data.get('fecha_importacion'),
             nombre_fabricante=validated_data.get('nombre_fabricante'),

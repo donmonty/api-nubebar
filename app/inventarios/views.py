@@ -1440,7 +1440,7 @@ def crear_botella(request):
         payload['nombre_marca'] = request.data['nombre_marca']
         payload['tipo_producto'] = request.data['tipo_producto']
         payload['graduacion_alcoholica'] = request.data['graduacion_alcoholica']
-        payload['capacidad'] = request.data['capacidad']
+        #payload['capacidad'] = request.data['capacidad']
         payload['origen_del_producto'] = request.data['origen_del_producto']
         payload['fecha_importacion'] = request.data['fecha_importacion']
         payload['nombre_fabricante'] = request.data['nombre_fabricante']

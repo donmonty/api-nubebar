@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.conf import settings
 
 import datetime
+import decimal
 #from datetime import date
 
 
@@ -506,4 +507,97 @@ class ProductoSinRegistro(models.Model):
         return 'SUCURSAL: {} - CODIGO: {} - NOMBRE: {}'.format(self.sucursal, self.codigo_pos, self.nombre)
 
 
+"""
+--------------------------------------------------------------------------
+Un ReporteMermas es el reporte de mermas de una Inspeccion
+--------------------------------------------------------------------------
+"""
 
+class ReporteMermas(models.Model):
+
+	fecha_registro 	= models.DateField(auto_now_add=True)
+	fecha_inicial 	= models.DateField(blank=True, null=True, default=None)
+	fecha_final 	= models.DateField(blank=True, null=True, default=None)
+	inspeccion 		= models.ForeignKey(Inspeccion, related_name='reportes_mermas_inspeccion', on_delete=models.CASCADE)
+	almacen 		= models.ForeignKey(Almacen, related_name='reportes_mermas_almacen', on_delete=models.CASCADE)
+
+	class Meta:
+		verbose_name_plural = 'ReportesMermas'
+		get_latest_by = 'fecha_registro'
+
+	def __str__(self):
+		return 'FECHA: {} - INSPECCION: {} - ALMACEN: {} - SUCURSAL: {} - FECHA INICIAL: {} - FECHA FINAL: {}'.format(self.fecha_registro, self.inspeccion.id, self.almacen.id, self.almacen.sucursal.nombre, self.fecha_inicial, self.fecha_final)
+
+
+"""
+--------------------------------------------------------------------------
+Una MermaIngrediente es la merma registrada para un Ingediente como resultado
+de hacer una Inspeccion
+--------------------------------------------------------------------------
+"""
+
+class MermaIngrediente(models.Model):
+
+	ingrediente 	= models.ForeignKey(Ingrediente, related_name='mermas_ingrediente', on_delete=models.CASCADE)
+	reporte 		= models.ForeignKey(ReporteMermas, related_name='mermas_reporte', blank=True, null=True, on_delete=models.CASCADE)
+	almacen 		= models.ForeignKey(Almacen, related_name='mermas_almacen', on_delete=models.CASCADE)
+	fecha_inicial 	= models.DateField(blank=True, null=True, default=None)
+	fecha_final 	= models.DateField(blank=True, null=True, default=None)
+	consumo_ventas 	= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+	consumo_real 	= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+	merma 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+	porcentaje 		= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+
+	class Meta:
+		verbose_name_plural = 'MermasIngredientes'
+
+	def save(self, *args, **kwargs):
+
+		try:
+			self.merma = self.consumo_ventas - self.consumo_real
+			self.porcentaje = (self.merma / self.consumo_ventas) * 100
+			super(MermaIngrediente, self).save(*args, **kwargs)
+
+		except (TypeError, ZeroDivisionError):
+
+			if (self.consumo_ventas is None) & (self.consumo_real is None):
+				self.merma = decimal.Decimal(0)
+				self.porcentaje = decimal.Decimal(0)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+			elif self.consumo_ventas is None:
+				self.merma = decimal.Decimal(0) - self.consumo_real
+				self.porcentaje = decimal.Decimal(-100)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+			elif self.consumo_real is None:
+				self.merma = self.consumo_ventas
+				self.porcentaje = decimal.Decimal(100)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+			else:
+				self.merma = self.consumo_ventas - self.consumo_real
+				self.porcentaje = decimal.Decimal(-100)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+
+	def __str__(self):
+		return 'INGREDIENTE: {} - MERMA: {} ml - FECHA INICIAL: {} - FECHA FINAL: {} - REPORTE: {} - ALMACEN: {} - SUCURSAL: {}'.format(self.ingrediente.nombre, self.merma, self.fecha_inicial, self.fecha_final, self.reporte.id, self.almacen.id, self.almacen.sucursal.nombre)
+
+
+		# # Calculamos la merma
+		# if self.consumo_ventas == None:
+		# 	self.merma = decimal.Decimal(0) - self.consumo_real
+		# elif self.consumo_real == None:
+		# 	self.merma = self.consumo_ventas
+		# else:
+		# 	self.merma = self.consumo_ventas - self.consumo_real
+
+		# # Calculamos el porcentaje
+		# try:
+		# 	self.porcentaje = (self.merma / self.consumo_ventas) * 100
+		# 	super(MermaIngrediente, self).save(*args, **kwargs)
+
+		# except ZeroDivisionError, Exception:
+		# 	self.porcentaje = decimal.Decimal(0)
+		# 	super(MermaIngrediente, self).save(*args, **kwargs)
