@@ -317,12 +317,16 @@ class Producto(models.Model):
 	graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
 	capacidad 					= models.IntegerField(blank=True, null=True)
 	origen_del_producto 		= models.CharField(max_length=255, blank=True)
+	fecha_envasado 				= models.CharField(max_length=255, blank=True)
 	fecha_importacion 			= models.CharField(max_length=255, blank=True)
+	lote_produccion 			= models.CharField(max_length=255, blank=True)
+	numero_pedimento 			= models.CharField(max_length=255, blank=True)
 	nombre_fabricante 			= models.CharField(max_length=255, blank=True)
 	rfc_fabricante 				= models.CharField(max_length=255, blank=True)
 
 	# Registro con app iOS
 	fecha_registro 				= models.DateTimeField(auto_now_add=True)
+	peso_nueva 					= models.IntegerField(blank=True, null=True)
 	peso_cristal 				= models.IntegerField(blank=True, null=True)
 	precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 
@@ -362,7 +366,10 @@ class Botella(models.Model):
 	graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
 	capacidad 					= models.IntegerField(blank=True, null=True)
 	origen_del_producto 		= models.CharField(max_length=255, blank=True)
+	fecha_envasado 				= models.CharField(max_length=255, blank=True)
 	fecha_importacion 			= models.CharField(max_length=255, blank=True)
+	lote_produccion 			= models.CharField(max_length=255, blank=True)
+	numero_pedimento 			= models.CharField(max_length=255, blank=True)
 	nombre_fabricante 			= models.CharField(max_length=255, blank=True)
 	rfc_fabricante 				= models.CharField(max_length=255, blank=True)
 	

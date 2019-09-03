@@ -49,6 +49,9 @@ def calcular_consumos(inspeccion, fecha_inicial, fecha_final):
     items_inspeccion_2 = items_inspeccion_2.values('botella__producto__ingrediente__id')
     ingredientes_inspeccion = models.Ingrediente.objects.filter(id__in=items_inspeccion_2)
 
+    # print('::: INGREDIENTES INSPECCION :::')
+    # print(ingredientes_inspeccion)
+
     #----------------------------------------------------------------------------------
     #----------------------------------------------------------------------------------
 

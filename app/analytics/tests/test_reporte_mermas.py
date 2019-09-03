@@ -229,7 +229,7 @@ class AnalyticsTests(TestCase):
 
         self.producto_jw_black = models.Producto.objects.create(
             folio='Ii0814634647',
-            ingrediente=self.maestro_dobel,
+            ingrediente=self.jw_black,
             peso_cristal=500,
             capacidad=750,
         )
@@ -760,7 +760,7 @@ class AnalyticsTests(TestCase):
             self.botella_jw_black_3.save()
             self.botella_jw_black_3.refresh_from_db()
 
-            #------ AJUSTES PARA BOTELLA JW BLACK 3---------------------
+            #------ AJUSTES PARA BOTELLA JW BLACK 4---------------------
 
             # Asignamos la fecha de baja
             self.botella_jw_black_4.fecha_baja = aware_datetime
