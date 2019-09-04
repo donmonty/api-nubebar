@@ -6,7 +6,7 @@ import requests
 def get_data_sat(folio):
 
     try:
-        url_sat = BeautifulSoup(requests.get('https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3='+folio).text, 'lxml')
+        url_sat = BeautifulSoup(requests.get('https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3='+folio).text, 'html.parser')
         tables = url_sat.find_all('table')
 
         #---------------------- DATOS MARBETE -----------------------

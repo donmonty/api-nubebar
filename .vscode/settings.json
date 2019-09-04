@@ -1,4 +1,5 @@
 {
     "python.pythonPath": "C:\\Users\\anton\\Anaconda3\\python.exe",
-    "files.eol": "\n"
+    "files.eol": "\n",
+    "python.formatting.provider": "autopep8"
 }

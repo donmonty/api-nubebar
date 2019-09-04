@@ -209,13 +209,14 @@ class ItemInspeccionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.ItemInspeccion
         fields = ('id', 'peso_botella', 'timestamp_inspeccion')
-
+        # order_by('-timestamp')
 
 
 class BotellaItemInspeccionSerializer(serializers.ModelSerializer):
     """ Despliega una botella con su lista de ItemsInspeccion """
 
-    inspecciones_botella = ItemInspeccionSerializer(many=True)
+    #inspecciones_botella = ItemInspeccionSerializer(many=True)
+    inspecciones_botella = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Botella
@@ -228,8 +229,14 @@ class BotellaItemInspeccionSerializer(serializers.ModelSerializer):
             'precio_unitario',
             'proveedor',
             'fecha_registro',
+            'capacidad',
+            'peso_cristal',
             'inspecciones_botella'
         )
+
+        def get_inspecciones_botella(self, instance):
+            inspecciones_botella = instance.inspecciones_botella.all().order_by('-id')
+            return ItemInspeccionSerializer(inspecciones_botella, many=True).data
 
 #------------------------------------------------------------------
 class SucursalSerializer(serializers.ModelSerializer):

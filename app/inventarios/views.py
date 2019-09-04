@@ -721,7 +721,7 @@ def resumen_inspeccion_no_contado(request, inspeccion_id):
         
         # Si no hay botellas pendientes de inspección, enviamos un reponse con el mensaje
         else:
-            return Response({'mensaje: No hay botellas pendientes de inspección.'})
+            return Response({'mensaje': 'No hay botellas pendientes de inspección.'})
 
     else:
         Response(status=status.HTTP_400_BAD_REQUEST)
@@ -831,7 +831,7 @@ def resumen_inspeccion_contado(request, inspeccion_id):
                         nombre_ingrediente = ingrediente.nombre
                         cantidad = ingrediente.items_inspeccion
                         # Los guardamos en un diccionario
-                        obj_ingrediente['ingrediente'] = nombre_ingrediente
+                        obj_ingrediente['ingrediente_id'] = ingrediente_id
                         obj_ingrediente['ingrediente'] = nombre_ingrediente
                         obj_ingrediente['cantidad'] = cantidad
                         # Guardamos el diccionario en una lista de ingredientes
