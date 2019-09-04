@@ -1,5 +1,6 @@
 from django.db.models import F, Q, QuerySet, Avg, Count, Sum
 from core import models
+from django.contrib.auth import get_user_model
 import datetime
 
 
@@ -40,7 +41,7 @@ usuario_3 = get_user_model().objects.create(email='usuario3@foodstack.mx', passw
 usuario_3.sucursales.add(atomic_thai)
 
 # Autenticación
-client.force_authenticate(usuario)
+#client.force_authenticate(usuario)
 
 #Categorías
 categoria_licor = models.Categoria.objects.create(nombre='LICOR')
