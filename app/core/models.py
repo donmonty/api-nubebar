@@ -411,11 +411,11 @@ class Botella(models.Model):
 
 	def __str__(self):
 		producto = self.producto
-		ingrediente = producto.ingrediente
-		nombre_ingrediente = ingrediente.nombre
+		#ingrediente = producto.ingrediente
+		#nombre_ingrediente = ingrediente.nombre
 		nombre_sucursal = self.sucursal.nombre
 		numero_almacen = self.almacen.numero
-		return 'FOLIO: {} - INGREDIENTE: {} - PESO CRISTAL: {} - PRECIO: {} - ESTADO: {} - SUCURSAL: {} - ALMACEN: {}'.format(self.folio, nombre_ingrediente, self.peso_cristal, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
+		return 'FOLIO: {} - PESO CRISTAL: {} - PRECIO: {} - ESTADO: {} - SUCURSAL: {} - ALMACEN: {}'.format(self.folio, self.peso_cristal, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
 
 """
 --------------------------------------------------------------------------
