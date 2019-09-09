@@ -2380,8 +2380,11 @@ def get_marbete_sat_v2(request, folio_id):
             """
             Si no hubo un match, notificamos al cliente.
             """
-            mensaje = {'mensaje': 'No se encontro un match de Producto.'}
-            return Response(mensaje)
+            output = {
+                'mensaje': 'No se encontro un match de Producto.',
+                'data_marbete': data_marbete['marbete']
+            }
+            return Response(output)
 
 
     else:
