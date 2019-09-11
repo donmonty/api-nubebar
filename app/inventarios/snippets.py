@@ -169,10 +169,10 @@ botella_herradura_blanco = models.Botella.objects.create(
 
 
 # Inspección 1
-inspeccion_1 = models.Inspeccion.objects.create(
-    almacen=barra_1,
-    sucursal=magno_brasserie,
-    usuario_alta=usuario,
-    usuario_cierre=usuario,
-    estado='1' # CERRADA
-)
+# inspeccion_1 = models.Inspeccion.objects.create(
+#     almacen=barra_1,
+#     sucursal=magno_brasserie,
+#     usuario_alta=usuario,
+#     usuario_cierre=usuario,
+#     estado='1' # CERRADA
+# )

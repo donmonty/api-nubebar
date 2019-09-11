@@ -234,9 +234,9 @@ class BotellaItemInspeccionSerializer(serializers.ModelSerializer):
             'inspecciones_botella'
         )
 
-        def get_inspecciones_botella(self, instance):
-            inspecciones_botella = instance.inspecciones_botella.all().order_by('-id')
-            return ItemInspeccionSerializer(inspecciones_botella, many=True).data
+    def get_inspecciones_botella(self, instance):
+        inspecciones_botella = instance.inspecciones_botella.all().order_by('-id')
+        return ItemInspeccionSerializer(inspecciones_botella, many=True).data
 
 #------------------------------------------------------------------
 class SucursalSerializer(serializers.ModelSerializer):
