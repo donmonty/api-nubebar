@@ -326,6 +326,7 @@ class Producto(models.Model):
 
 	# Registro con app iOS
 	fecha_registro 				= models.DateTimeField(auto_now_add=True)
+	codigo_barras 				= models.CharField(max_length=255, blank=True)
 	peso_nueva 					= models.IntegerField(blank=True, null=True)
 	peso_cristal 				= models.IntegerField(blank=True, null=True)
 	precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
@@ -334,7 +335,7 @@ class Producto(models.Model):
 	def __str__(self):
 		nombre_ingrediente = self.ingrediente.nombre
 
-		return 'NOMBRE: {} - FOLIO: {} - PESO CRISTAL: {} - PRECIO UNITARIO: {}'.format(nombre_ingrediente, self.folio, self.peso_cristal, self.precio_unitario)
+		return 'NOMBRE: {} - CAPACIDAD: {} - BARCODE: {} - PRECIO UNITARIO: {}'.format(nombre_ingrediente, self.capacidad, self.codigo_barras, self.precio_unitario)
 
 
 """
@@ -380,6 +381,7 @@ class Botella(models.Model):
 	usuario_alta 				= models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL) # Revisar
 	sucursal 					= models.ForeignKey(Sucursal, related_name='botellas_sucursal', null=True, blank=True, on_delete=models.SET_NULL)
 	almacen 					= models.ForeignKey(Almacen, related_name='botellas_almacen', blank=True, null=True, on_delete=models.SET_NULL)
+	peso_nueva 					= models.IntegerField(blank=True, null=True, default=0)
 	peso_cristal 				= models.IntegerField(blank=True, null=True, default=0)
 	peso_inicial 				= models.IntegerField(blank=True, null=True, default=0)
 	peso_actual 				= models.IntegerField(blank=True, null=True, default=0)
@@ -415,7 +417,7 @@ class Botella(models.Model):
 		nombre_ingrediente = ingrediente.nombre
 		nombre_sucursal = self.sucursal.nombre
 		numero_almacen = self.almacen.numero
-		return 'FOLIO: {} - INGREDIENTE: {} - PESO CRISTAL: {} - PRECIO: {} - ESTADO: {} - SUCURSAL: {} - ALMACEN: {}'.format(self.folio, nombre_ingrediente, self.peso_cristal, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
+		return 'FOLIO: {} - INGREDIENTE: {} - CAPACIDAD: {} - PRECIO: {} - ESTADO: {} - SUCURSAL: {} - ALMACEN: {}'.format(self.folio, nombre_ingrediente, self.capacidad, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
 
 """
 --------------------------------------------------------------------------
