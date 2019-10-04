@@ -2467,3 +2467,51 @@ def get_peso_botella_nueva(request, producto_id):
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que retorna los datos de un Producto a partir de su codigo de barras
+
+INPUTS:
+-  El codigo de barras
+
+OUTPUTS:
+-  Los datos del Producto
+
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_producto(request, codigo_barras):
+
+    if request.method == 'GET':
+
+        # Checamos si el Producto existe en la base de datos
+        # Si el producto existe, retornamos sus datos
+        try:
+            producto = models.Producto.objects.get(codigo_barras=codigo_barras)
+            serializer = serializers.ProductoSerializer(producto)
+
+            response = {
+                'status': 'success',
+                'data': serializer.data
+            }
+
+            return Response(response)
+
+        # Si el producto no existe, retornamos un mensaje de error
+        except ObjectDoesNotExist:
+
+            response = {
+                'status': 'error',
+                'message': 'No existe un Producto con ese codigo de barras.'
+            }
+
+            return Response(response)
+
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+

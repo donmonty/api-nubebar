@@ -183,6 +183,7 @@ class MovimientosTests(TestCase):
         # Productos
         self.producto_licor43 = models.Producto.objects.create(
             folio='Ii0000000001',
+            codigo_barras='8410221110075',
             ingrediente=self.licor_43,
             peso_cristal = 500,
             capacidad=750,
@@ -2108,3 +2109,44 @@ class MovimientosTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'error')
         self.assertEqual(response.data['message'], 'El Ingrediente del Producto asociado a esta botella no tiene factor de peso registrado.')
+
+
+    #-----------------------------------------------------------------------------
+    def test_get_producto_ok(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'get_producto'
+        - Testear que se retornan los datos de un Producto cuando este existe en
+        la base de datos
+        -----------------------------------------------------------------------------
+        """
+
+        # Construimos el request
+        codigo_barras = self.producto_licor43.codigo_barras
+        url = reverse('inventarios:get-producto', args=[codigo_barras])
+        response = self.client.get(url)
+
+        #print(response.data)
+
+        self.assertEqual(response.data['status'], 'success')
+        self.assertEqual(response.data['data']['codigo_barras'], codigo_barras)
+
+
+    #-----------------------------------------------------------------------------
+    def test_get_producto_error(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'get_producto'
+        - Testear cuando se busca un Producto con un codigo de barras que no existe
+        -----------------------------------------------------------------------------
+        """
+
+        # Construimos el request
+        codigo_barras = '0000000000'
+        url = reverse('inventarios:get-producto', args=[codigo_barras])
+        response = self.client.get(url)
+
+        print(response.data)
+
+        self.assertEqual(response.data['status'], 'error')
+

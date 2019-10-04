@@ -1372,6 +1372,21 @@ class ProveedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Proveedor
         fields = '__all__'
+
+
+
+
+"""
+-------------------------------------------------------------------
+Serializer que retorna los datos de un Producto
+-------------------------------------------------------------------
+"""
+class ProductoSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Producto
+        fields = '__all__'
+        depth = 1
         
         
 
