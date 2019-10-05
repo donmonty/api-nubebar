@@ -1387,6 +1387,173 @@ class ProductoSerializer(serializers.ModelSerializer):
         model = models.Producto
         fields = '__all__'
         depth = 1
+
+
+"""
+-------------------------------------------------------------------
+Serializer que construye una Botella nueva
+-------------------------------------------------------------------
+"""
+class BotellaNuevaSerializer(serializers.ModelSerializer):
+
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'almacen',
+            'sucursal',
+            'usuario_alta',
+            'proveedor',
+            'producto',
+            'folio',
+            'peso_nueva',
+        )
+
+        extra_kwargs = {
+            'peso_nueva': {'required': False},
+        }
+
+    def create(self, validated_data):
+
+        peso_nueva = validated_data.get('peso_nueva')
+        producto = validated_data.get('producto')
+        ingrediente = producto.ingrediente
+        precio_unitario = producto.precio_unitario
+        capacidad = producto.capacidad
+        factor_peso = ingrediente.factor_peso
+
+        # Si contamos con el peso de la botella medido con la bascula:
+        if peso_nueva is not None:
+
+            peso_inicial = peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+            # Si el blueprint no cuenta con 'peso_nueva', le asignamos uno de referencia temporal
+            if producto.peso_nueva is None:
+                
+                producto.peso_nueva = peso_nueva
+                producto.save()
+
+        # Si no contamos con el peso medido con la bascula (pasa solo cuando registramos un vino de mesa):
+        else:
+
+            # Todos los blueprints de vinos de mesa deben por fuerza contar con 'peso_nueva'
+            peso_nueva = producto.peso_nueva
+            peso_inicial = producto.peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+
+        botella = models.Botella.objects.create(
+
+            # Datos tomados del blueprint y la bascula
+            producto=producto,
+            peso_nueva=peso_nueva,
+            peso_inicial=peso_inicial,
+            peso_cristal=peso_cristal,
+            precio_unitario=precio_unitario,
+
+            # Datos del marbete:
+            folio=validated_data.get('folio'),
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+
+            # Datos del producto en marbete:
+            nombre_marca='',
+            tipo_producto='',
+            graduacion_alcoholica='',
+            capacidad=capacidad,
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos adicionales:
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            proveedor=validated_data.get('proveedor')
+
+        )
+
+        return botella
+
+
+"""
+-------------------------------------------------------------------
+Serializer que construye una Producto nuevo sin necesidad de
+tomar los datos obtenidos del SAT
+-------------------------------------------------------------------
+"""
+class ProductoNuevoSerializer(serializers.ModelSerializer):
+
+    ingrediente = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Ingrediente.objects.all())
+
+    class Meta:
+        model = models.Producto
+        fields = (
+            'id',
+            'ingrediente',
+            'codigo_barras',
+            'nombre_marca',
+            'capacidad',
+            'precio_unitario',
+            'peso_nueva'
+        )
+
+    def create(self, validated_data):
+
+        ingrediente = validated_data.get('ingrediente')
+        factor_peso = ingrediente.factor_peso
+        capacidad = validated_data.get('capacidad')
+        peso_nueva = validated_data.get('peso_nueva')
+
+        if peso_nueva is not None:
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+        else:
+            peso_cristal =  None
+
+        producto = models.Producto.objects.create(
+
+            ingrediente=ingrediente,
+            codigo_barras=validated_data.get('codigo_barras'),
+            nombre_marca=validated_data.get('nombre_marca'),
+            capacidad=capacidad,
+            precio_unitario=validated_data.get('precio_unitario'),
+            peso_nueva=peso_nueva,
+            peso_cristal=peso_cristal,
+
+            # Datos de la botella en el marbete
+            tipo_producto='',
+            graduacion_alcoholica='',
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos del marbete:
+            folio='',
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+        )
+
+        return producto
         
         
 

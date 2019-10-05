@@ -75,6 +75,7 @@ class MovimientosTests(TestCase):
         self.categoria_tequila = models.Categoria.objects.create(nombre='TEQUILA')
         self.categoria_whisky = models.Categoria.objects.create(nombre='WHISKY')
         self.categoria_ginebra = models.Categoria.objects.create(nombre='GINEBRA')
+        self.categoria_vino_tinto = models.Categoria.objects.create(nombre='VINO TINTO')
 
         # Ingredientes
         self.licor_43 = models.Ingrediente.objects.create(
@@ -113,6 +114,13 @@ class MovimientosTests(TestCase):
             categoria=self.categoria_ginebra,
             factor_peso=0.95
         )
+        self.balero = models.Ingrediente.objects.create(
+            codigo='VTIN001',
+            nombre='BALERO',
+            categoria=self.categoria_vino_tinto,
+            factor_peso=0.98
+        )
+
 
 
         # Recetas
@@ -247,6 +255,13 @@ class MovimientosTests(TestCase):
             fecha_importacion='08-04-2019',
         )
 
+        self.producto_balero = models.Producto.objects.create(
+            ingrediente=self.balero,
+            codigo_barras='503011357383',
+            peso_nueva=1241,
+            capacidad=750,
+        )
+
         # Botellas
         self.botella_licor43 = models.Botella.objects.create(
             folio='Ii0000000001',
@@ -283,6 +298,7 @@ class MovimientosTests(TestCase):
             estado='0'
         )
 
+        
     #-----------------------------------------------------------------------------
     #-----------------------------------------------------------------------------
     #-----------------------------------------------------------------------------
@@ -2133,6 +2149,11 @@ class MovimientosTests(TestCase):
 
 
     #-----------------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+
+    #-----------------------------------------------------------------------------
     def test_get_producto_error(self):
         """
         -----------------------------------------------------------------------------
@@ -2146,7 +2167,250 @@ class MovimientosTests(TestCase):
         url = reverse('inventarios:get-producto', args=[codigo_barras])
         response = self.client.get(url)
 
-        print(response.data)
+        #print(response.data)
 
         self.assertEqual(response.data['status'], 'error')
 
+    
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_con_peso_ok(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que se crea con éxito una botella nueva.
+        - El payload incluye el peso de la botella tomado con la bascula.
+        -----------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': 'Nn1644803750',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'proveedor': self.vinos_america.id,
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado la botella
+        self.assertTrue(models.Botella.objects.get(id=response.data['id']))
+
+        # Tomamos la botella recien creada
+        botella_creada = models.Botella.objects.get(id=response.data['id'])
+
+        # Checamos que el folio de la botella creada sea igual al del payload
+        self.assertEqual(payload['folio'], botella_creada.folio)
+
+        # Checamos que el resto de los atributos de la botella sean iguales a los del payload
+        self.assertEqual(payload['usuario_alta'], botella_creada.usuario_alta.id)
+        self.assertEqual(payload['sucursal'], botella_creada.sucursal.id)
+        self.assertEqual(payload['almacen'], botella_creada.almacen.id)
+        self.assertEqual(payload['producto'], botella_creada.producto.id)
+        self.assertEqual(payload['proveedor'], botella_creada.proveedor.id)
+
+        # Checamos que el 'peso_nueva' de la botella creada sea igual que el 'peso_nueva' del payload
+        self.assertEqual(botella_creada.peso_nueva, payload['peso_nueva'])
+
+        # Checamos que el 'peso_inicial' de la botella creada sea igual al 'peso_nueva' del payload
+        self.assertEqual(botella_creada.peso_inicial, payload['peso_nueva'])
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_sin_peso_ok(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que se crea con éxito una botella nueva.
+        - El payload NO incluye el peso de la botella tomado con la bascula.
+        -----------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': 'Nn1467616922',
+            'producto' : self.producto_balero.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            #'peso_nueva': 1241,
+            'proveedor': self.vinos_america.id,
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado la botella
+        self.assertTrue(models.Botella.objects.get(id=response.data['id']))
+
+        # Tomamos la botella recien creada
+        botella_creada = models.Botella.objects.get(id=response.data['id'])
+
+        # Checamos que el folio de la botella creada sea igual al del payload
+        self.assertEqual(payload['folio'], botella_creada.folio)
+
+        # Checamos que el resto de los atributos de la botella sean iguales a los del payload
+        self.assertEqual(payload['usuario_alta'], botella_creada.usuario_alta.id)
+        self.assertEqual(payload['sucursal'], botella_creada.sucursal.id)
+        self.assertEqual(payload['almacen'], botella_creada.almacen.id)
+        self.assertEqual(payload['producto'], botella_creada.producto.id)
+        self.assertEqual(payload['proveedor'], botella_creada.proveedor.id)
+
+        # Checamos que el 'peso_inicial' de la botella sea igual al 'peso_nueva' del blueprint
+        self.assertEqual(botella_creada.peso_inicial, self.producto_balero.peso_nueva) 
+
+        # Checamos que el 'peso_nueva' de la botella sea igual al 'peso_nueva' del blueprint
+        self.assertEqual(botella_creada.peso_nueva, self.producto_balero.peso_nueva)
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_update_blueprint_ok(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que al crear una botella nueva y se le asigne el peso de la bascula, 
+        tambien se le asigne al blueprint si este no cuenta con 'peso_nueva'
+        -----------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': 'Nn1644803750',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'proveedor': self.vinos_america.id,
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado la botella
+        self.assertTrue(models.Botella.objects.get(id=response.data['id']))
+
+        # Tomamos la botella recien creada
+        botella_creada = models.Botella.objects.get(id=response.data['id'])
+
+        # Checamos que el folio de la botella creada sea igual al del payload
+        self.assertEqual(payload['folio'], botella_creada.folio)
+
+        # Checamos que el resto de los atributos de la botella sean iguales a los del payload
+        self.assertEqual(payload['usuario_alta'], botella_creada.usuario_alta.id)
+        self.assertEqual(payload['sucursal'], botella_creada.sucursal.id)
+        self.assertEqual(payload['almacen'], botella_creada.almacen.id)
+        self.assertEqual(payload['producto'], botella_creada.producto.id)
+        self.assertEqual(payload['proveedor'], botella_creada.proveedor.id)
+
+        # Checamos que el 'peso_nueva' del blueprint sea igual que 'peso_nueva' del payload
+        # Para ello tenemos que primero refrescar la instancia del blueprint
+        self.producto_siete_leguas_reposado_1000_01.refresh_from_db()
+        self.assertEqual(payload['peso_nueva'], self.producto_siete_leguas_reposado_1000_01.peso_nueva) 
+
+    
+    #-----------------------------------------------------------------------------
+    def test_crear_producto_v3_con_peso_nueva_ok(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'crear_producto_v3'
+        - Testear que se crea un producto ok
+        - En este caso se incluye el peso  de la botella nueva en el request
+        -----------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'ingrediente': self.licor_43.id,
+            'codigo_barras': '8410221110075',
+            'nombre': 'LICOR 43 750',
+            'capacidad': 750,
+            'precio_unitario': 350.50,
+            'peso_nueva': 1352
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-producto-v3')
+        response = self.client.post(url, payload)
+        #json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado el producto
+        self.assertTrue(models.Producto.objects.get(id=response.data['id']))
+
+        # Tomamos el producto recien creado
+        producto_creado = models.Producto.objects.get(id=response.data['id'])
+
+        # Checamos que los atributos del producto sean iguales a los del payload
+        self.assertEqual(payload['ingrediente'], producto_creado.ingrediente.id)
+        self.assertEqual(payload['codigo_barras'], producto_creado.codigo_barras)
+        self.assertEqual(payload['nombre'], producto_creado.nombre_marca)
+        self.assertEqual(payload['capacidad'], producto_creado.capacidad)
+        self.assertEqual(payload['peso_nueva'], producto_creado.peso_nueva)
+        self.assertAlmostEqual(payload['precio_unitario'], float(producto_creado.precio_unitario))
+        
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_producto_v3_sin_peso_nueva_ok(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'crear_producto_v3'
+        - Testear que se crea un producto ok
+        - En este caso NO se incluye el peso de la botella nueva en el request
+        -----------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'ingrediente': self.licor_43.id,
+            'codigo_barras': '8410221110075',
+            'nombre': 'LICOR 43 750',
+            'capacidad': 750,
+            'precio_unitario': 350.50,
+            #'peso_nueva': None
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-producto-v3')
+        response = self.client.post(url, payload)
+        #json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado el producto
+        self.assertTrue(models.Producto.objects.get(id=response.data['id']))
+
+        # Tomamos el producto recien creado
+        producto_creado = models.Producto.objects.get(id=response.data['id'])
+
+        # Checamos que los atributos del producto sean iguales a los del payload
+        self.assertEqual(payload['ingrediente'], producto_creado.ingrediente.id)
+        self.assertEqual(payload['codigo_barras'], producto_creado.codigo_barras)
+        self.assertEqual(payload['nombre'], producto_creado.nombre_marca)
+        self.assertEqual(payload['capacidad'], producto_creado.capacidad)
+        self.assertAlmostEqual(payload['precio_unitario'], float(producto_creado.precio_unitario))
+
+        # Checamos que el 'peso_nueva' del producto sea None
+        self.assertEqual(producto_creado.peso_nueva, None)

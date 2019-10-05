@@ -2515,3 +2515,100 @@ def get_producto(request, codigo_barras):
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear una Botella nueva
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_botella_nueva(request):
+
+    if request.method == 'POST':
+
+        # Construimos el payload
+        payload = {}
+
+        payload['usuario_alta'] = request.user.id
+        payload['sucursal'] = request.data['sucursal']
+        payload['almacen'] = request.data['almacen']
+        payload['proveedor'] = request.data['proveedor'] 
+        payload['producto'] = request.data['producto']
+        payload['folio'] = request.data['folio']
+
+        # Si el peso de la botella medido con la bascula viene en el request, lo incluimos en el payload
+        if 'peso_nueva' in request.data:
+            
+            payload['peso_nueva'] = request.data['peso_nueva']
+
+        # Si el peso de la botella medido con la bascula no viene en el request, le asignamos None
+        else:
+
+            payload['peso_nueva'] = None
+
+        
+        # Serializamos el payload
+        serializer = serializers.BotellaNuevaSerializer(data=payload, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+        
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+    
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear un Producto nuevo sin necesidad de scrapear el SAT
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_producto_v3(request):
+
+    if request.method == 'POST':
+
+        # Construimos el payload del request
+        payload = {}
+        payload['ingrediente']      = request.data['ingrediente']
+        payload['codigo_barras']    = request.data['codigo_barras']
+        payload['nombre_marca']     = request.data['nombre']
+        payload['capacidad']        = request.data['capacidad']
+        payload['precio_unitario']  = request.data['precio_unitario']
+
+        # Si el peso del blueprint viene incluido en el request, lo tomamos.
+        # SI no viene incluido, le asignamos None
+        if 'peso_nueva' in request.data:
+            payload['peso_nueva'] = request.data['peso_nueva']
+
+        else:
+            payload['peso_nueva'] = None
+
+        # Serializamos el payload
+        serializer = serializers.ProductoNuevoSerializer(data=payload)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+

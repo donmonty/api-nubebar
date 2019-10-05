@@ -53,6 +53,8 @@ urlpatterns = [
     path('get-peso-botella-nueva/producto/<int:producto_id>', views.get_peso_botella_nueva, name='get-peso-botella-nueva'),
     path('crear-producto-v2/', views.crear_producto_v2, name='crear-producto-v2'),
     path('get-producto/barcode/<str:codigo_barras>', views.get_producto, name='get-producto'),
+    path('crear-botella-nueva/', views.crear_botella_nueva, name='crear-botella-nueva'), 
+    path('crear-producto-v3/', views.crear_producto_v3, name='crear-producto-v3'),
     #path('get-inspeccion/<int:inspeccion_id>', views.DetalleInspeccionView.as_view(), name='detalle-inspeccion'),
     #path('get-inspecciones/sucursal/<int:sucursal_id>/almacen/<int:almacen_id>', views.ListaInspeccionesView.as_view(), name='lista-inspecciones')
     #path('inspecciones/sucursal/<int:sucursal_id>/almacen/<int:almacen_id>', views.InspeccionDisplayViewSet, 'get-inspecciones')
