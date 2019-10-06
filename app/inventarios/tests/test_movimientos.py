@@ -25,6 +25,7 @@ from inventarios.serializers import (
                                         BotellaPostSerializer,
                                         BotellaConsultaSerializer,
                                         ProveedorSerializer,
+                                        BotellaProductoSerializer,
                                     )
 
 import datetime
@@ -208,6 +209,7 @@ class MovimientosTests(TestCase):
         self.producto_siete_leguas_blanco_1000_01 = models.Producto.objects.create(
             folio='Nn1831940434',
             ingrediente=self.siete_leguas_blanco,
+            peso_nueva=1550,
             peso_cristal=600,
             capacidad=1000,
             nombre_marca='Siete Leguas',
@@ -296,6 +298,34 @@ class MovimientosTests(TestCase):
             almacen=self.barra_1,
             proveedor=self.vinos_america,
             estado='0'
+        )
+
+        self.botella_siete_leguas_blanco_1000 = models.Botella.objects.create(
+            folio='Nn0000000003',
+            producto=self.producto_siete_leguas_blanco_1000_01,
+            capacidad=1000,
+            peso_nueva=1550,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+            nombre_marca='Siete Leguas',
+            tipo_producto="Tequila joven o blanco 100{} agave".format('%'),
+            fecha_envasado='11-07-2019',
+        )
+
+        self.botella_larios = models.Botella.objects.create(
+            folio='Ii0000000002',
+            producto=self.producto_larios,
+            capacidad=700,
+            peso_nueva=1165,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+            nombre_marca='LARIOS',
+            tipo_producto="Ginebra",
+            fecha_importacion='11-07-2019',
         )
 
         
@@ -2414,3 +2444,211 @@ class MovimientosTests(TestCase):
 
         # Checamos que el 'peso_nueva' del producto sea None
         self.assertEqual(producto_creado.peso_nueva, None)
+
+
+
+    #-----------------------------------------------------------------------------
+    @patch('inventarios.scrapper_2.get_data_sat')
+    def test_get_match_botella_nacional_ok(self, mock_scrapper):
+        """
+        ---------------------------------------------------------------------------
+        Test para el endpoint 'get_match_botella'
+        - Testear que hay un match de Botella nacional correcto
+
+        ---------------------------------------------------------------------------
+        """
+        # Definimos el output simulado del scrapper
+        mock_scrapper.return_value = {
+            'marbete': 
+                {
+                    'folio': 'Nn7777777777',
+                    'nombre_marca': 'Siete Leguas',
+                    'capacidad': 1000,
+                    'tipo_producto': "Tequila joven o blanco 100{} agave".format('%'),
+                    'fecha_envasado': '11-07-2019'
+                },
+            'status': '1'
+        }
+
+        # Tomamos la botella registrada que debe hacer match con la busqueda y la serializamos
+        serializer = BotellaProductoSerializer(self.botella_siete_leguas_blanco_1000)
+        json_serializer = json.dumps(serializer.data)
+        #print('::: SERIALIZER DATA - PRODUCTO INGREDIENTE :::')
+        #print(serializer.data)
+        #print(json_serializer)
+
+        # Hacemos el request
+        #url_sat = 'http://www.sat.gob.mx'
+        folio_sat = mock_scrapper.return_value['marbete']['folio']
+        url = reverse('inventarios:get-match-botella', args=[folio_sat])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
+        #print(json_response)
+
+        output_esperado = {
+            'status': 'success',
+            'data': serializer.data
+        }
+        json_output_esperado = json.dumps(output_esperado)
+
+        #self.assertEqual(1, 1)
+
+        # Checamos que el response sea exitoso
+        self.assertEqual(response.data['status'], 'success')
+        # Checamos que el id de la botella buscada sea el correcto
+        self.assertEqual(response.data['data']['id'], self.botella_siete_leguas_blanco_1000.id)
+        # Checamos que todos los demas datos del response sean los esperados
+        self.assertEqual(json_output_esperado, json_response)
+
+
+    #-----------------------------------------------------------------------------
+    @patch('inventarios.scrapper_2.get_data_sat')
+    def test_get_match_botella_importada_ok(self, mock_scrapper):
+        """
+        ---------------------------------------------------------------------------
+        Test para el endpoint 'get_match_botella'
+        - Testear que hay un match de Botella importada correcto
+
+        ---------------------------------------------------------------------------
+        """
+        # Definimos el output simulado del scrapper
+        mock_scrapper.return_value = {
+            'marbete': 
+                {
+                    'folio': 'Ii7777777777',
+                    'nombre_marca': 'LARIOS',
+                    'capacidad': 700,
+                    'tipo_producto': "Ginebra",
+                    'fecha_importacion': '11-07-2019'
+                },
+            'status': '1'
+        }
+
+        # Tomamos la botella registrada que debe hacer match con la busqueda y la serializamos
+        serializer = BotellaProductoSerializer(self.botella_larios)
+        #json_serializer = json.dumps(serializer.data)
+        #print('::: SERIALIZER DATA - PRODUCTO INGREDIENTE :::')
+        #print(serializer.data)
+        #print(json_serializer)
+
+        # Hacemos el request
+        #url_sat = 'http://www.sat.gob.mx'
+        folio_sat = mock_scrapper.return_value['marbete']['folio']
+        url = reverse('inventarios:get-match-botella', args=[folio_sat])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+        print('::: RESPONSE DATA :::')
+        #print(response.data)
+        print(json_response)
+
+        output_esperado = {
+            'status': 'success',
+            'data': serializer.data
+        }
+        json_output_esperado = json.dumps(output_esperado)
+
+        #self.assertEqual(1, 1)
+
+        # Checamos que el response sea exitoso
+        self.assertEqual(response.data['status'], 'success')
+        # Checamos que el id de la botella buscada sea el correcto
+        self.assertEqual(response.data['data']['id'], self.botella_larios.id)
+        # Checamos que todos los demas datos del response sean los esperados
+        self.assertEqual(json_output_esperado, json_response)
+
+
+    
+    #-----------------------------------------------------------------------------
+    @patch('inventarios.scrapper_2.get_data_sat')
+    def test_get_match_botella_error_sat(self, mock_scrapper):
+        """
+        ---------------------------------------------------------------------------
+        Test para el endpoint 'get_match_botella'
+        - Testear cuando hay un error de conexion con el SAT
+
+        ---------------------------------------------------------------------------
+        """
+
+        # Definimos la respuesta simulada del scrapper
+        mock_scrapper.return_value = {
+            'status': '0'
+        }
+
+        # Construimos el response
+        folio_sat = 'Ii0000000009'
+        url = reverse('inventarios:get-match-botella', args=[folio_sat])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
+        #print(json_response)
+
+        # Checamos que el response sea el mensaje de error esperado
+        self.assertEqual(response.data['status'], 'error')
+        self.assertEqual(response.data['message'], 'Hubo problemas al conectarse con el SAT. Intente de nuevo más tarde.')
+
+
+    
+    #-----------------------------------------------------------------------------
+    def test_get_match_botella_error_botella_existente(self):
+        """
+        ---------------------------------------------------------------------------
+        Test para el endpoint 'get_match_botella'
+        - Testear cuando la botella consultada ya existe en la base de datos
+
+        ---------------------------------------------------------------------------
+        """
+
+        # Construimos el response
+        folio_sat = 'Ii0000000001'
+        url = reverse('inventarios:get-match-botella', args=[folio_sat])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+        #print(json_response)
+
+        # Checamos que el response sea el correcto
+        self.assertEqual(response.data['status'], 'error')
+        self.assertEqual(response.data['message'], 'Esta botella ya es parte del inventario.')
+
+
+    #-----------------------------------------------------------------------------
+    @patch('inventarios.scrapper_2.get_data_sat')
+    def test_get_match_botella_error_match(self, mock_scrapper):
+        """
+        ---------------------------------------------------------------------------
+        Test para el endpoint 'get_match_botella'
+        - Testear cuando no e encuentra un match de Botella
+
+        ---------------------------------------------------------------------------
+        """
+        # Definimos el output simulado del scrapper
+        mock_scrapper.return_value = {
+            'marbete': 
+                {
+                    'folio': 'Ii7777777777',
+                    'nombre_marca': 'LARIOS',
+                    'capacidad': 700,
+                    'tipo_producto': "Ginebra",
+                    'fecha_importacion': '01-01-2019' # Cambiamos la fecha de importacion para que no haya match
+                },
+            'status': '1'
+        }
+
+        # Construimos el request
+        folio_sat = mock_scrapper.return_value['marbete']['folio']
+        url = reverse('inventarios:get-match-botella', args=[folio_sat])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+        #print(json_response)
+
+        # Checamos que el response sea el correcto
+        self.assertEqual(response.data['status'], 'error')
+        self.assertEqual(response.data['message'], 'No se encontro un match de Botella.')
+
+

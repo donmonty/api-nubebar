@@ -1554,6 +1554,25 @@ class ProductoNuevoSerializer(serializers.ModelSerializer):
         )
 
         return producto
+
+
+"""
+-------------------------------------------------------------------
+Serializer que retorna los datos de una Botella y su producto
+asociado
+-------------------------------------------------------------------
+"""
+class BotellaProductoSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'folio',
+            'producto',
+            'peso_nueva'
+        )
+        depth = 1
         
         
 

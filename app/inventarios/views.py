@@ -2608,7 +2608,165 @@ def crear_producto_v3(request):
 
 
 
+"""
+-----------------------------------------------------------------------------------
+Endpoint para buscar un match de Botella, usando los siguientes datos del marbete:
+
+- nombre_marca
+- tipo_producto
+- capacidad
+- fecha_envasado/fecha_importacion
+
+NOTAS:
+- Utiliza el scrapper
+- Despliega los datos del marbete, pero no registra la botella
+- Si el marbete no especifica el ingrediente, el response lo deja en blanco
+
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_match_botella(request, folio_id):
+ 
+    """
+    -------------------------------------------------------------------------
+    Esta función busca match de Botellas utilizando los siguientes filtros:
+    - 'nombre_marca'
+    - 'tipo_producto'
+    - 'capacidad'
+    - 'fecha_envasado'/'fecha_importacion'
+    -------------------------------------------------------------------------
+    """
+    def search_botella(data_marbete):
+        # Tomamos los siguientes datos del marbete: 'folio', 'nombre_marca' y 'capacidad'
+        folio = data_marbete['marbete']['folio']
+        nombre_marca = data_marbete['marbete']['nombre_marca']
+        tipo_producto = data_marbete['marbete']['tipo_producto']
+        capacidad = int(data_marbete['marbete']['capacidad'])
+        
+        # Checamos si hay Botellas que hagan match con los criterios de busqueda:
+
+        #---------------------------------------------------------------------------------------
+        # CASO 1: La botella es nacional, utilizamos 'fecha_envasado' en el filtro de busqueda
+        #---------------------------------------------------------------------------------------
+        if folio[0] == 'N':
+
+            fecha_envasado = data_marbete['marbete']['fecha_envasado']
+            
+            # Tomamos el mes de la fecha de envasado
+            mes_envasado = fecha_envasado[3:]
+
+            try:
+                botellas = models.Botella.objects.filter(nombre_marca__iexact=nombre_marca, tipo_producto__iexact=tipo_producto, capacidad=capacidad, fecha_envasado__endswith=mes_envasado)
+                # Tomamos la Botella con la fecha de registro mas reciente
+                botella = botellas.latest('fecha_registro')
+                # Retornamos la Botella
+                return botella
+
+            # Si no hay una sola Botella que haga match, retornamos None
+            except ObjectDoesNotExist:
+                return None
+
+        #---------------------------------------------------------------------------------------
+        # CASO 2: Si la botella es importada, utilizamos 'fecha_importacion' en el filtro de busqueda
+        #---------------------------------------------------------------------------------------
+        else:
+
+            fecha_importacion = data_marbete['marbete']['fecha_importacion']
+            # Tomamos el mes de la fecha de importacion
+            mes_importacion = fecha_importacion[3:]
+
+            try:
+                botellas = models.Botella.objects.filter(nombre_marca__iexact=nombre_marca, tipo_producto__iexact=tipo_producto, capacidad=capacidad, fecha_importacion__endswith=mes_importacion)
+                # Tomamos la Botella con la fecha de registro mas reciente
+                botella = botellas.latest('fecha_registro')
+                # Retornamos la Botella
+                return botella
+
+            # Si no hay un solo Producto que haga match, retornamos None
+            except ObjectDoesNotExist:
+                return None
 
 
+    #--------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------------
 
 
+    if request.method == 'GET':
+        
+        # Tomamos las variables del request
+        folio = folio_id
+        
+        # Checamos si la botella ya está registrada en la base de datos
+        try: 
+            botella = models.Botella.objects.get(folio=folio)
+            #botella = models.Botella.objects.get(folio=folio_sat)
+           
+            response = {
+                'status': 'error',
+                'message': 'Esta botella ya es parte del inventario.'
+            }
+            return Response(response)
+
+        # Si la botella no está registrada, OK y continuamos
+        except ObjectDoesNotExist:
+            # Obtenemos los datos del marbete del SAT usando el scrapper
+            data_marbete = scrapper_2.get_data_sat(folio)
+
+            # Si el scrapper tuvo problemas para conectarse al SAT, notificamos error.
+            if data_marbete['status'] == '0':
+                #mensaje = {'mensaje': 'Hubo problemas al conectarse con el SAT. Intente de nuevo más tarde.'}
+                response = {
+                    'status': 'error',
+                    'message': 'Hubo problemas al conectarse con el SAT. Intente de nuevo más tarde.'
+                }
+                return Response(response) 
+
+            # Si no hubo problemas para conectarse con el SAT, continuamos:
+
+            #------------------------------------------------------------------------------------------------------
+            # BUSQUEDA DE MATCH DE BOTELLA
+            #------------------------------------------------------------------------------------------------------
+
+            # Buscamos en la base de datos un match de Botella
+            botella_match = search_botella(data_marbete)
+
+            """
+            Si existe un match de Botella:
+            - Construimos un objecto con los datos del marbete y la Botella 
+            """
+            if botella_match is not None:
+                # Construimos un diccionario con los datos del marbete
+                #serializer = serializers.ProductoIngredienteSerializer(producto_match)
+                serializer = serializers.BotellaProductoSerializer(botella_match)
+
+                # Construimos un objecto con los datos de la Botella
+
+                #output = {
+                #    'data_marbete': data_marbete['marbete'],
+                #    'producto': serializer.data
+                #}
+                
+                response = {
+                    'status': 'success',
+                    'data': serializer.data
+                }
+
+                # Retornamos el output
+                return Response(response)
+
+            
+            """
+            Si no hubo un match, notificamos al cliente.
+            """
+            response = {
+                'status': 'error',
+                'message': 'No se encontro un match de Botella.'
+            }
+            return Response(response)
+
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
