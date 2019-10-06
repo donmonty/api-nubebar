@@ -1573,13 +1573,85 @@ class BotellaProductoSerializer(serializers.ModelSerializer):
             'peso_nueva'
         )
         depth = 1
-        
-        
 
 
-    
+"""
+-------------------------------------------------------------------
+Serializer que construye una Botella usada
+-------------------------------------------------------------------
+"""
+class BotellaUsadaSerializer(serializers.ModelSerializer):
 
-    
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
 
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'almacen',
+            'sucursal',
+            'usuario_alta',
+            'proveedor',
+            'producto',
+            'folio',
+            'peso_nueva',
+            'peso_inicial',
+        )
 
+    def create(self, validated_data):
 
+        # Construimos los datos de peso de la botella
+        peso_nueva = validated_data.get('peso_nueva')
+        peso_inicial = validated_data.get('peso_inicial')
+        producto = validated_data.get('producto')
+        ingrediente = producto.ingrediente
+        precio_unitario = producto.precio_unitario
+        capacidad = producto.capacidad
+        factor_peso = ingrediente.factor_peso
+        peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+        estado_botella = '1'
+
+        # Creamos y guardamos la botella en la base de datos
+        botella = models.Botella.objects.create(
+
+            # Datos tomados del blueprint y la bascula
+            producto=producto,
+            peso_nueva=peso_nueva,
+            peso_inicial=peso_inicial,
+            peso_cristal=peso_cristal,
+            precio_unitario=precio_unitario,
+
+            # Datos del marbete:
+            folio=validated_data.get('folio'),
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+
+            # Datos del producto en marbete:
+            nombre_marca='',
+            tipo_producto='',
+            graduacion_alcoholica='',
+            capacidad=capacidad,
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos adicionales:
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            proveedor=validated_data.get('proveedor'),
+            estado=estado_botella,
+
+        )
+
+        return botella

@@ -2652,3 +2652,58 @@ class MovimientosTests(TestCase):
         self.assertEqual(response.data['message'], 'No se encontro un match de Botella.')
 
 
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_usada_ok(self):
+        """
+        -----------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_usada'
+        - Testear que se crea con éxito una botella usada.
+        -----------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': 'Nn1644803750',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'peso_bascula': 1000,
+            'proveedor': self.vinos_america.id,
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-usada')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        print('::: RESPONSE DATA :::')
+        #print(json_response)
+        print(response.data)
+
+        # Checamos que se haya creado la botella
+        self.assertTrue(models.Botella.objects.get(id=response.data['id']))
+
+        # Tomamos la botella recien creada
+        botella_creada = models.Botella.objects.get(id=response.data['id'])
+
+        # Checamos que el folio de la botella creada sea igual al del payload
+        self.assertEqual(payload['folio'], botella_creada.folio)
+
+        # Checamos que el resto de los atributos de la botella sean iguales a los del payload
+        self.assertEqual(payload['usuario_alta'], botella_creada.usuario_alta.id)
+        self.assertEqual(payload['sucursal'], botella_creada.sucursal.id)
+        self.assertEqual(payload['almacen'], botella_creada.almacen.id)
+        self.assertEqual(payload['producto'], botella_creada.producto.id)
+        self.assertEqual(payload['proveedor'], botella_creada.proveedor.id)
+
+        # Checamos que el 'peso_nueva' de la botella creada sea igual que el 'peso_nueva' del payload
+        self.assertEqual(botella_creada.peso_nueva, payload['peso_nueva'])
+
+        # Checamos que el 'peso_inicial' de la botella creada sea igual al 'peso_bascula' del payload
+        self.assertEqual(botella_creada.peso_inicial, payload['peso_bascula'])
+
+        # Checamos que el estado de la botella creada sea '1', o sea, usada
+        self.assertEqual(botella_creada.estado, '1')
+
+

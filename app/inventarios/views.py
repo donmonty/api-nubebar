@@ -2770,3 +2770,43 @@ def get_match_botella(request, folio_id):
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear una Botella usada
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_botella_usada(request):
+
+    if request.method == 'POST':
+
+        # Construimos el payload
+        payload = {}
+
+        payload['usuario_alta'] = request.user.id
+        payload['sucursal'] = request.data['sucursal']
+        payload['almacen'] = request.data['almacen']
+        payload['proveedor'] = request.data['proveedor'] 
+        payload['producto'] = request.data['producto']
+        payload['folio'] = request.data['folio']
+        payload['peso_nueva'] = request.data['peso_nueva']
+        payload['peso_inicial'] = request.data['peso_bascula']
+
+        # Serializamos el payload
+        serializer = serializers.BotellaUsadaSerializer(data=payload, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+        
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
