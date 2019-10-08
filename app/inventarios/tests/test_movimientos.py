@@ -2156,6 +2156,11 @@ class MovimientosTests(TestCase):
         self.assertEqual(response.data['status'], 'error')
         self.assertEqual(response.data['message'], 'El Ingrediente del Producto asociado a esta botella no tiene factor de peso registrado.')
 
+    #-----------------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
 
     #-----------------------------------------------------------------------------
     def test_get_producto_ok(self):
@@ -2171,17 +2176,15 @@ class MovimientosTests(TestCase):
         codigo_barras = self.producto_licor43.codigo_barras
         url = reverse('inventarios:get-producto', args=[codigo_barras])
         response = self.client.get(url)
+        json_response = json.dumps(response.data)
+
+        #print(json_response)
 
         #print(response.data)
 
         self.assertEqual(response.data['status'], 'success')
         self.assertEqual(response.data['data']['codigo_barras'], codigo_barras)
 
-
-    #-----------------------------------------------------------------------------
-    #-----------------------------------------------------------------------------
-    #-----------------------------------------------------------------------------
-    #-----------------------------------------------------------------------------
 
     #-----------------------------------------------------------------------------
     def test_get_producto_error(self):
@@ -2196,8 +2199,9 @@ class MovimientosTests(TestCase):
         codigo_barras = '0000000000'
         url = reverse('inventarios:get-producto', args=[codigo_barras])
         response = self.client.get(url)
+        json_response = json.dumps(response.data)
 
-        #print(response.data)
+        #print(json_response)
 
         self.assertEqual(response.data['status'], 'error')
 
@@ -2538,10 +2542,10 @@ class MovimientosTests(TestCase):
         folio_sat = mock_scrapper.return_value['marbete']['folio']
         url = reverse('inventarios:get-match-botella', args=[folio_sat])
         response = self.client.get(url)
-        json_response = json.dumps(response.data)
-        print('::: RESPONSE DATA :::')
+        #json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
         #print(response.data)
-        print(json_response)
+        #print(json_response)
 
         output_esperado = {
             'status': 'success',
@@ -2580,7 +2584,7 @@ class MovimientosTests(TestCase):
         folio_sat = 'Ii0000000009'
         url = reverse('inventarios:get-match-botella', args=[folio_sat])
         response = self.client.get(url)
-        json_response = json.dumps(response.data)
+        #json_response = json.dumps(response.data)
         #print('::: RESPONSE DATA :::')
         #print(response.data)
         #print(json_response)
@@ -2605,9 +2609,9 @@ class MovimientosTests(TestCase):
         folio_sat = 'Ii0000000001'
         url = reverse('inventarios:get-match-botella', args=[folio_sat])
         response = self.client.get(url)
-        json_response = json.dumps(response.data)
-        print('::: RESPONSE DATA :::')
-        print(response.data)
+        #json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
         #print(json_response)
 
         # Checamos que el response sea el correcto
@@ -2642,9 +2646,9 @@ class MovimientosTests(TestCase):
         folio_sat = mock_scrapper.return_value['marbete']['folio']
         url = reverse('inventarios:get-match-botella', args=[folio_sat])
         response = self.client.get(url)
-        json_response = json.dumps(response.data)
-        print('::: RESPONSE DATA :::')
-        print(response.data)
+        #json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
         #print(json_response)
 
         # Checamos que el response sea el correcto
@@ -2677,9 +2681,9 @@ class MovimientosTests(TestCase):
         url = reverse('inventarios:crear-botella-usada')
         response = self.client.post(url, payload)
         json_response = json.dumps(response.data)
-        print('::: RESPONSE DATA :::')
+        #print('::: RESPONSE DATA :::')
         #print(json_response)
-        print(response.data)
+        #print(response.data)
 
         # Checamos que se haya creado la botella
         self.assertTrue(models.Botella.objects.get(id=response.data['id']))
