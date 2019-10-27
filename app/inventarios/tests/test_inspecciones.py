@@ -2065,114 +2065,114 @@ class InspeccionesTests(TestCase):
 
     
     #-----------------------------------------------------------------------------
-    def test_update_estado_botella_vacia(self):
-        """
-        Test para el view 'update_botella_nueva_vacia'.
-        Testear que el peso de la botella, su estatus de inspección y su contenido (VACIA)
-        se actualizan de forma correcta 
-        """
+    # def test_update_estado_botella_vacia(self):
+    #     """
+    #     Test para el view 'update_botella_nueva_vacia'.
+    #     Testear que el peso de la botella, su estatus de inspección y su contenido (VACIA)
+    #     se actualizan de forma correcta 
+    #     """
 
-        # Definimos el historial de inspecciones de nuestra botella de Licor 43
-        with freeze_time("2019-05-01"):
-            # Inspeccion 1
-            inspeccion_1 = models.Inspeccion.objects.create(
-                almacen=self.barra_1,
-                sucursal=self.magno_brasserie,
-                usuario_alta=self.usuario,
-                usuario_cierre=self.usuario,
-                #estado='0' # ABIERTA
-            )
+    #     # Definimos el historial de inspecciones de nuestra botella de Licor 43
+    #     with freeze_time("2019-05-01"):
+    #         # Inspeccion 1
+    #         inspeccion_1 = models.Inspeccion.objects.create(
+    #             almacen=self.barra_1,
+    #             sucursal=self.magno_brasserie,
+    #             usuario_alta=self.usuario,
+    #             usuario_cierre=self.usuario,
+    #             #estado='0' # ABIERTA
+    #         )
 
-            # ItemsInspeccion de la Inspeccion 1
-            item_inspeccion_1 = models.ItemInspeccion.objects.create(
-                inspeccion=inspeccion_1,
-                botella=self.botella_licor43,
-                peso_botella = 1212,
-                inspeccionado=False
-            )
+    #         # ItemsInspeccion de la Inspeccion 1
+    #         item_inspeccion_1 = models.ItemInspeccion.objects.create(
+    #             inspeccion=inspeccion_1,
+    #             botella=self.botella_licor43,
+    #             peso_botella = 1212,
+    #             inspeccionado=False
+    #         )
         
-        # Construimos el request
-        payload = {
-            'item_inspeccion': item_inspeccion_1.id,
-            'estado': '0',
-        }
-        url = reverse('inventarios:update-botella-nueva-vacia')
-        response = self.client.patch(url, payload)
+    #     # Construimos el request
+    #     payload = {
+    #         'item_inspeccion': item_inspeccion_1.id,
+    #         'estado': '0',
+    #     }
+    #     url = reverse('inventarios:update-botella-nueva-vacia')
+    #     response = self.client.patch(url, payload)
 
-        #print('::: RESPONSE DATA :::')
-        #print(response.data)
-        json_response = json.dumps(response.data)
-        #print(json_response)
+    #     #print('::: RESPONSE DATA :::')
+    #     #print(response.data)
+    #     json_response = json.dumps(response.data)
+    #     #print(json_response)
 
-        # Refrescamos nuestro ItemInspeccion y la Botella
-        item_inspeccion_1.refresh_from_db()
-        self.botella_licor43.refresh_from_db()
-        #print('::: DATOS BOTELLA :::')
-        #print(self.botella_licor43.estado)
-        #print(self.botella_licor43.peso_inicial)
-        #print(self.botella_licor43.fecha_baja)
+    #     # Refrescamos nuestro ItemInspeccion y la Botella
+    #     item_inspeccion_1.refresh_from_db()
+    #     self.botella_licor43.refresh_from_db()
+    #     #print('::: DATOS BOTELLA :::')
+    #     #print(self.botella_licor43.estado)
+    #     #print(self.botella_licor43.peso_inicial)
+    #     #print(self.botella_licor43.fecha_baja)
 
-        # Checamos que el nuevo estado de la botella asociada al ItemInspeccion sea correcto
-        self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
-        # Checamos que el nuevo peso de la botella declarado en el ItemInspeccion  sea igual al peso del cristal, o sea, 500
-        self.assertEqual(item_inspeccion_1.peso_botella, 500)
-        # Checamos que el peso nuevo de la botella ('peso_actual') sea igual que el peso del cristal
-        self.assertEqual(self.botella_licor43.peso_actual, 500)
+    #     # Checamos que el nuevo estado de la botella asociada al ItemInspeccion sea correcto
+    #     self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
+    #     # Checamos que el nuevo peso de la botella declarado en el ItemInspeccion  sea igual al peso del cristal, o sea, 500
+    #     self.assertEqual(item_inspeccion_1.peso_botella, 500)
+    #     # Checamos que el peso nuevo de la botella ('peso_actual') sea igual que el peso del cristal
+    #     self.assertEqual(self.botella_licor43.peso_actual, 500)
 
     
-    #-----------------------------------------------------------------------------
-    def test_update_estado_botella_nueva(self):
-        """
-        Test para el view 'update_botella_nueva_vacia'.
-        Testear que el peso de la botella, su estatus de inspección y su contenido (NUEVA)
-        se actualizan de forma correcta 
-        """
+    # #-----------------------------------------------------------------------------
+    # def test_update_estado_botella_nueva(self):
+    #     """
+    #     Test para el view 'update_botella_nueva_vacia'.
+    #     Testear que el peso de la botella, su estatus de inspección y su contenido (NUEVA)
+    #     se actualizan de forma correcta 
+    #     """
 
-        # Definimos el historial de inspecciones de nuestra botella de Licor 43
-        with freeze_time("2019-05-01"):
-            # Inspeccion 1
-            inspeccion_1 = models.Inspeccion.objects.create(
-                almacen=self.barra_1,
-                sucursal=self.magno_brasserie,
-                usuario_alta=self.usuario,
-                usuario_cierre=self.usuario,
-                #estado='0' # ABIERTA
-            )
+    #     # Definimos el historial de inspecciones de nuestra botella de Licor 43
+    #     with freeze_time("2019-05-01"):
+    #         # Inspeccion 1
+    #         inspeccion_1 = models.Inspeccion.objects.create(
+    #             almacen=self.barra_1,
+    #             sucursal=self.magno_brasserie,
+    #             usuario_alta=self.usuario,
+    #             usuario_cierre=self.usuario,
+    #             #estado='0' # ABIERTA
+    #         )
 
-            # ItemsInspeccion de la Inspeccion 1
-            item_inspeccion_1 = models.ItemInspeccion.objects.create(
-                inspeccion=inspeccion_1,
-                botella=self.botella_licor43,
-                peso_botella = 1212,
-                inspeccionado=False
-            )
+    #         # ItemsInspeccion de la Inspeccion 1
+    #         item_inspeccion_1 = models.ItemInspeccion.objects.create(
+    #             inspeccion=inspeccion_1,
+    #             botella=self.botella_licor43,
+    #             peso_botella = 1212,
+    #             inspeccionado=False
+    #         )
         
-        # Construimos el request
-        payload = {
-            'item_inspeccion': item_inspeccion_1.id,
-            'estado': '2',
-        }
-        url = reverse('inventarios:update-botella-nueva-vacia')
-        response = self.client.patch(url, payload)
+    #     # Construimos el request
+    #     payload = {
+    #         'item_inspeccion': item_inspeccion_1.id,
+    #         'estado': '2',
+    #     }
+    #     url = reverse('inventarios:update-botella-nueva-vacia')
+    #     response = self.client.patch(url, payload)
 
-        #print('::: RESPONSE DATA :::')
-        #print(response.data)
-        json_response = json.dumps(response.data)
-        #print(json_response)
+    #     #print('::: RESPONSE DATA :::')
+    #     #print(response.data)
+    #     json_response = json.dumps(response.data)
+    #     #print(json_response)
 
-        # Refrescamos nuestro ItemInspeccion y la Botella
-        item_inspeccion_1.refresh_from_db()
-        self.botella_licor43.refresh_from_db()
-        #print('::: DATOS BOTELLA :::')
-        #print(self.botella_licor43.estado)
-        #print(self.botella_licor43.peso_actual)
+    #     # Refrescamos nuestro ItemInspeccion y la Botella
+    #     item_inspeccion_1.refresh_from_db()
+    #     self.botella_licor43.refresh_from_db()
+    #     #print('::: DATOS BOTELLA :::')
+    #     #print(self.botella_licor43.estado)
+    #     #print(self.botella_licor43.peso_actual)
 
-        # Checamos que el nuevo estado de la botella asociada al ItemInspeccion sea correcto
-        self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
-        # Checamos que el peso botella nevo sea igual a 1288
-        self.assertEqual(item_inspeccion_1.peso_botella, 1288)
-        # Checamos que el peso nuevo de la botella sea igual a 1288
-        self.assertEqual(self.botella_licor43.peso_actual, 1288)
+    #     # Checamos que el nuevo estado de la botella asociada al ItemInspeccion sea correcto
+    #     self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
+    #     # Checamos que el peso botella nevo sea igual a 1288
+    #     self.assertEqual(item_inspeccion_1.peso_botella, 1288)
+    #     # Checamos que el peso nuevo de la botella sea igual a 1288
+    #     self.assertEqual(self.botella_licor43.peso_actual, 1288)
 
 
     #-----------------------------------------------------------------------------
@@ -2458,6 +2458,143 @@ class InspeccionesTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(inspeccion.items_inspeccionados.count(), 2)
+
+    
+    #-----------------------------------------------------------------------------
+    def test_update_estado_botella_vacia(self):
+        """
+        Test para el view 'update_botella_nueva_vacia'.
+        Testear que el peso de la botella, su estatus de inspección y su contenido (VACIA)
+        se actualizan de forma correcta 
+        """
+
+        # Creamos una botella nueva para el test
+        botella_licor43_2 = models.Botella.objects.create(
+            folio='Ii0000000777',
+            producto=self.producto_licor43,
+            capacidad=750,
+            peso_nueva=1352,
+            peso_cristal=500,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america
+        )
+
+        # Definimos el historial de inspecciones de nuestra botella de Licor 43
+        with freeze_time("2019-05-01"):
+            # Inspeccion 1
+            inspeccion_1 = models.Inspeccion.objects.create(
+                almacen=self.barra_1,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                #estado='0' # ABIERTA
+            )
+
+            # ItemsInspeccion de la Inspeccion 1
+            item_inspeccion_1 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_1,
+                botella=botella_licor43_2,
+                peso_botella=None,
+                inspeccionado=False
+            )
+        
+        # Construimos el request
+        payload = {
+            'item_inspeccion': item_inspeccion_1.id,
+            'estado': '0',
+        }
+        url = reverse('inventarios:update-botella-nueva-vacia')
+        response = self.client.patch(url, payload)
+
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
+        json_response = json.dumps(response.data)
+        #print(json_response)
+
+        # Refrescamos nuestro ItemInspeccion y la Botella
+        item_inspeccion_1.refresh_from_db()
+        botella_licor43_2.refresh_from_db()
+        #print('::: DATOS BOTELLA :::')
+        #print(self.botella_licor43.estado)
+        #print(self.botella_licor43.peso_inicial)
+        #print(self.botella_licor43.fecha_baja)
+
+        # Checamos que el nuevo estado de la botella asociada al ItemInspeccion sea correcto
+        self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
+        # Checamos que el nuevo 'peso_botella' del ItemInspeccion sea igual a 'peso_cristal'
+        self.assertEqual(item_inspeccion_1.peso_botella, botella_licor43_2.peso_cristal)
+        # Checamos que el nuevo 'peso_actual' de la botella sea igual que 'peso_cristal'
+        self.assertEqual(botella_licor43_2.peso_actual, botella_licor43_2.peso_cristal)
+
+    
+    #-----------------------------------------------------------------------------
+    def test_update_estado_botella_nueva(self):
+        """
+        Test para el view 'update_botella_nueva_vacia'.
+        Testear que el peso de la botella, su estatus de inspección y su contenido (NUEVA)
+        se actualizan de forma correcta 
+        """
+
+        # Creamos una botella nueva para el test
+        botella_licor43_2 = models.Botella.objects.create(
+            folio='Ii0000000777',
+            producto=self.producto_licor43,
+            capacidad=750,
+            peso_nueva=1352,
+            peso_cristal=500,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america
+        )
+
+        # Definimos el historial de inspecciones de nuestra botella de Licor 43
+        with freeze_time("2019-05-01"):
+            # Inspeccion 1
+            inspeccion_1 = models.Inspeccion.objects.create(
+                almacen=self.barra_1,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                #estado='0' # ABIERTA
+            )
+
+            # ItemsInspeccion de la Inspeccion 1
+            item_inspeccion_1 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_1,
+                botella=botella_licor43_2,
+                peso_botella=None,
+                inspeccionado=False
+            )
+        
+        # Construimos el request
+        payload = {
+            'item_inspeccion': item_inspeccion_1.id,
+            'estado': '2',
+        }
+        url = reverse('inventarios:update-botella-nueva-vacia')
+        response = self.client.patch(url, payload)
+
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
+        json_response = json.dumps(response.data)
+        #print(json_response)
+
+        # Refrescamos nuestro ItemInspeccion y la Botella
+        item_inspeccion_1.refresh_from_db()
+        botella_licor43_2.refresh_from_db()
+        #print('::: DATOS BOTELLA :::')
+        #print(self.botella_licor43.estado)
+        #print(self.botella_licor43.peso_actual)
+
+        # Checamos que el nuevo estado de la botella asociada al ItemInspeccion sea correcto
+        self.assertEqual(item_inspeccion_1.botella.estado, payload['estado'])
+        # Checamos que 'peso_botella' del ItemInspeccion sea igual a 'peso_nueva' de la botella
+        self.assertEqual(item_inspeccion_1.peso_botella, botella_licor43_2.peso_nueva)
+        # Checamos que el 'peso_actual' de la botella sea igual a 'peso_nueva'
+        self.assertEqual(botella_licor43_2.peso_actual, botella_licor43_2.peso_nueva)
 
 
 

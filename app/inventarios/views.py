@@ -1166,7 +1166,7 @@ modifica su peso ad hoc
 @api_view(['PATCH'],)
 @permission_classes((IsAuthenticated,))
 @authentication_classes((TokenAuthentication,))
-def update_botella_nueva_vacia(request):
+def update_botella_nueva_vacia_2(request):
 
     if request.method == 'PATCH':
 
@@ -2810,3 +2810,66 @@ def crear_botella_usada(request):
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que modifica el estado de una botella inspeccionada a 'VACIA' o 'NUEVA' y
+modifica su peso ad hoc
+-----------------------------------------------------------------------------------
+"""
+@api_view(['PATCH'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def update_botella_nueva_vacia(request):
+
+    if request.method == 'PATCH':
+
+        # Tomamos las variables del request
+        item_inspeccion_id =  request.data['item_inspeccion']
+        estado_botella = request.data['estado']
+
+        # Tomamos el ItemInspeccion que deseamos actualizar
+        item = models.ItemInspeccion.objects.get(id=item_inspeccion_id)
+
+        # Tomamos la Botella asociada al ItemInspeccion
+        botella = item.botella
+        # Tomamos el Producto asociado a la Botella
+        #producto = botella.producto
+        # Tomamos el Ingrediente asociado a la Botella y el Producto
+        #ingrediente = producto.ingrediente
+
+        # Si queremos declarar la botella como VACIA
+        if estado_botella == '0':
+            # Tomamos el peso de la botella vacía
+            peso_botella = botella.peso_cristal
+        # Si queremos declarar la botella como NUEVA
+        elif estado_botella == '2':
+            # Calculamos el peso de la botella nueva
+            #peso_botella = producto.peso_cristal + int(round(producto.capacidad * ingrediente.factor_peso))
+            peso_botella = botella.peso_nueva
+
+       # Creamos el payload para el serializer
+        payload = {
+            'peso_botella': peso_botella,
+            'inspeccionado': True,
+            'botella': {'estado': estado_botella}
+        }
+
+        # Deserializamos el payload
+        serializer = serializers.ItemInspeccionBotellaUpdateSerializer(item, data=payload, partial=True)
+        # Verificamos que los datos a deserializar sean válidos
+        if serializer.is_valid():
+            # Actualizamos los datos de nuestro ItemInspeccion
+            serializer.save()
+            # Creamos el response
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        else:
+            # Si hay un error con los datos, lo notificamos
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Si el request no es PATCH, notificamos error
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST) 
