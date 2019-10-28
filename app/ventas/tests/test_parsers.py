@@ -3,6 +3,7 @@ from django.urls import reverse
 
 from ventas.parsers import parser_magno_brasserie
 from ventas.parsers import parser_gambinos_saopaulo
+from ventas.parsers import parser_pecos
 
 from core import models
 import os
@@ -197,4 +198,104 @@ class ParserGambinosSaoPauloTests(TestCase):
         # Comparamos el output esperado contra el real
         self.assertEqual(output_esperado, output_parser)
 
+
+class ParserPecosTests(TestCase):
+
+    maxDiff = None
+
+    def setUp(self):
+
+        # Cliente
+        self.operadora_pecos = models.Cliente.objects.create(nombre='OPERADORA GAMA')
+        # Sucursal
+        self.pecos = models.Sucursal.objects.create(nombre='LA CABAÑA DE PECOS', cliente=self.operadora_pecos)
+        # Almacen
+        self.barra_1 = models.Almacen.objects.create(nombre='BARRA 1', numero=1, sucursal=self.pecos)
+        # Caja
+        self.caja_1 = models.Caja.objects.create(numero=1, nombre='CAJA 1', almacen=self.barra_1)
+
     
+    def test_output_ok(self):
+        """ 
+        ----------------------------------------------------------------------
+        Testear que el output del parser es correcto
+        ----------------------------------------------------------------------
+        """
+
+        # Definimos un diccionario con el output esperado del parser
+        output_esperado = [
+            {
+                'sucursal_id': self.pecos.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': '14001',
+                'nombre': 'COPA AZTECA DE ORO',
+                'unidades': 1,
+                'importe': 75
+            },
+            {
+                'sucursal_id': self.pecos.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': '14007',
+                'nombre': 'COPA TORRES V',
+                'unidades': 9,
+                'importe': 675
+            },
+            {
+                'sucursal_id': self.pecos.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': '14008',
+                'nombre': 'COPA TORRES X',
+                'unidades': 7,
+                'importe': 595
+            },
+            {
+                'sucursal_id': self.pecos.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': '43028',
+                'nombre': 'CARAJILLO LATUFF',
+                'unidades': 4,
+                'importe': 560
+            }
+        ]
+
+        # Definimos el path absoluto del reporte de ventas
+        path_reporte_ventas = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ventas_pecos.XLS')
+
+        # Procesamos el reporte de ventas con el parser y guardamos el output en una variable
+        output_parser = parser_pecos.parser(path_reporte_ventas, self.pecos)
+        #print(output_parser)
+
+        # Convertimos el dataframe del output en un json
+        dataframe_output = output_parser['df_ventas']
+
+        # Tomamos las primeras 4 filas del dataframe
+        dataframe_output = dataframe_output.head(4)
+        #print('::: DATAFRAME OUTPUT :::')
+        #print(dataframe_output)
+
+        output_parser = dataframe_output.to_json(orient='records')
+        # Convertimos el json en un objeto de python
+        output_parser = json.loads(output_parser)
+        # Comparamos el output esperado contra el real
+        self.assertEqual(output_esperado, output_parser)
+
+
+    def test_output_error(self):
+        """
+        ----------------------------------------------------------------------
+        Testear que el parser maneja los errores de forma correcta
+        ----------------------------------------------------------------------
+        """
+
+        # Definimos el output esperado cuando hay un error en el parseo
+        output_esperado = {'df_ventas': {}, 'procesado': False}
+
+        # Definimos el path absoluto del reporte de ventas defectuoso
+        path_reporte_ventas = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'reporte_defectuoso.csv')
+
+        # Procesamos el reporte de ventas con el parser y guardamos el output en una variable
+        output_parser = parser_pecos.parser(path_reporte_ventas, self.pecos)
+        #print(output_parser)
+
+        # Comparamos el output esperado contra el real
+        self.assertEqual(output_esperado, output_parser)
