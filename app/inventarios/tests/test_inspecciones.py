@@ -1133,6 +1133,20 @@ class InspeccionesTests(TestCase):
         de forma adecuada
         """
 
+        # Creamos un ingrediente extra para el test
+        # Este Ingrediente será para verificar que no se muestren aquellos con count=0
+
+        # Creamos la categoría Ginebra para nuestro ingrediente nuevo
+        categoria_ginebra = models.Categoria.objects.create(nombre='GINEBRA')
+
+        # Creamos el ingrediente Larios
+        larios = models.Ingrediente.objects.create(
+            codigo='GINEO001',
+            nombre='LARIOS',
+            categoria=categoria_ginebra,
+            factor_peso=0.95
+        )
+
         # Creamos una Inspección para el test con fecha congelada
         with freeze_time("2019-05-01"):
             # Creamos una botella extra de Licor 43 solo para este test
@@ -1204,6 +1218,15 @@ class InspeccionesTests(TestCase):
                 .values('count')
             )
         )
+
+        #print('::: QUERYSET 1 - ORIGINAL')
+        #print(queryset_1)
+
+        # QUERYSET 1 AJUSTADO: El mismo pero excluimos aquellos donde items_inspeccion=0
+        queryset_1 = queryset_1.exclude(items_inspeccion=0)
+        #print('::: QUERYSET 1 - SIN COUNT=0')
+        #print(queryset_1)
+
 
         # QUERYSET 2: Categorías que contienen items a inspeccionar
         queryset_2 = models.Categoria.objects.annotate(
@@ -1399,6 +1422,20 @@ class InspeccionesTests(TestCase):
         Testear el endpoint de Resumen de Inspeccion (BOTELLAS NO CONTADAS)
         """
 
+        # Creamos un ingrediente extra para el test
+        # Este Ingrediente será para verificar que no se muestren aquellos ingredientes con count=0
+
+        # Creamos la categoría Ginebra para nuestro ingrediente nuevo
+        categoria_ginebra = models.Categoria.objects.create(nombre='GINEBRA')
+
+        # Creamos el ingrediente Larios
+        larios = models.Ingrediente.objects.create(
+            codigo='GINEO001',
+            nombre='LARIOS',
+            categoria=categoria_ginebra,
+            factor_peso=0.95
+        )
+
         # Creamos una Inspección para el test con fecha congelada
         with freeze_time("2019-05-01"):
             # Creamos una botella extra de Licor 43 solo para este test
@@ -1442,8 +1479,8 @@ class InspeccionesTests(TestCase):
         url = reverse('inventarios:resumen-inspeccion-no-contado', args=[inspeccion_id])
         response = self.client.get(url)
 
-        #print('::: DATOS DEL RESPONSE :::')
-        #print(response.data)
+        print('::: DATOS DEL RESPONSE :::')
+        print(response.data)
 
         # Checamos el status del response
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1469,6 +1506,20 @@ class InspeccionesTests(TestCase):
         """
         Testear el endpoint de Resumen de Inspeccion (BOTELLAS CONTADAS)
         """
+
+        # Creamos un ingrediente extra para el test
+        # Este Ingrediente será para verificar que no se muestren aquellos ingredientes con count=0
+
+        # Creamos la categoría Ginebra para nuestro ingrediente nuevo
+        categoria_ginebra = models.Categoria.objects.create(nombre='GINEBRA')
+
+        # Creamos el ingrediente Larios
+        larios = models.Ingrediente.objects.create(
+            codigo='GINEO001',
+            nombre='LARIOS',
+            categoria=categoria_ginebra,
+            factor_peso=0.95
+        )
 
         # Creamos una Inspección para el test con fecha congelada
         with freeze_time("2019-05-01"):

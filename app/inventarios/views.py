@@ -642,6 +642,13 @@ def resumen_inspeccion_no_contado(request, inspeccion_id):
                 .values('count')
             )
         )
+        #print('::: QUERYSET 1 - ORIGINAL :::')
+        #print(queryset_1)
+
+        #QUERYSET 1 AJUSTADO: Excluimos ingredientes donde 'items_inspeccion' = 0
+        queryset_1 = queryset_1.exclude(items_inspeccion=0)
+        #print('::: QUERYSET 1 - FIX :::')
+        #print(queryset_1)
 
         # QUERYSET 2: Categorías que contienen items a inspeccionar
         queryset_2 = models.Categoria.objects.annotate(
@@ -771,6 +778,13 @@ def resumen_inspeccion_contado(request, inspeccion_id):
                 .values('count')
             )
         )
+        #print('::: QUERYSET 1 - ORIGINAL :::')
+        #print(queryset_1)
+
+        #QUERYSET 1 AJUSTADO: Excluimos ingredientes donde 'items_inspeccion' = 0
+        queryset_1 = queryset_1.exclude(items_inspeccion=0)
+        #print('::: QUERYSET 1 - FIX :::')
+        #print(queryset_1)
 
         # QUERYSET 2: Categorías que contienen items a inspeccionar
         queryset_2 = models.Categoria.objects.annotate(
