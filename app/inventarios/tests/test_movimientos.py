@@ -2707,6 +2707,9 @@ class MovimientosTests(TestCase):
         # Checamos que el 'peso_inicial' de la botella creada sea igual al 'peso_bascula' del payload
         self.assertEqual(botella_creada.peso_inicial, payload['peso_bascula'])
 
+        # Checamos que el 'peso_actual' de la botella sea igual a su 'peso_inicial'
+        self.assertEqual(botella_creada.peso_actual, botella_creada.peso_inicial)
+
         # Checamos que el estado de la botella creada sea '1', o sea, usada
         self.assertEqual(botella_creada.estado, '1')
 
