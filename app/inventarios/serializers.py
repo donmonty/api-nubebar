@@ -1456,6 +1456,7 @@ class BotellaNuevaSerializer(serializers.ModelSerializer):
             peso_nueva=peso_nueva,
             peso_inicial=peso_inicial,
             peso_cristal=peso_cristal,
+            peso_actual=peso_inicial,
             precio_unitario=precio_unitario,
 
             # Datos del marbete:
