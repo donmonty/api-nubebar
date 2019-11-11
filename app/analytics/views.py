@@ -17,6 +17,7 @@ import datetime
 from analytics import serializers
 from analytics import reporte_costo_stock as cs
 from analytics import reporte_mermas as rm
+from analytics import reporte_stock as rs
 from core import models
 
 
@@ -165,6 +166,59 @@ def get_detalle_ventas_merma(request, merma_id):
 
         else:
             return Response(detalle_ventas)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para ver un Reporte de Stock para una sucursal
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_reporte_stock(request, sucursal_id):
+
+    if request.method == 'GET':
+
+        # Tomamos el id de la sucursal a consultar
+        sucursal_id = int(sucursal_id)
+        # Tomamos la sucursal a consultar
+        sucursal = models.Sucursal.objects.get(id=sucursal_id)
+
+        # Ejecutamos el reporte
+        reporte = rs.get_stock(sucursal)
+
+        # Retornamos el response
+        return Response(reporte)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para ver el detalle de un item en el Reporte de Stock
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_detalle_stock(request, producto_id, sucursal_id):
+
+    if request.method == 'GET':
+
+        # Tomamos los ids de la sucursal y producto a consultar
+        sucursal_id = int(sucursal_id)
+        producto_id = int(producto_id)
+
+        # Ejecutamos el reporte
+        reporte = rs.get_stock_detalle(producto_id, sucursal_id)
+
+        # Retornamos el response
+        return Response(reporte)
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
