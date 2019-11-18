@@ -14,4 +14,6 @@ urlpatterns = [
     path('get-reporte-costo-stock/almacen/<int:almacen_id>', views.get_reporte_costo_stock, name='get-reporte-costo-stock'),
     path('get-reporte-stock/sucursal/<int:sucursal_id>', views.get_reporte_stock, name='get-reporte-stock'),
     path('get-detalle-stock/producto/<int:producto_id>/sucursal/<int:sucursal_id>', views.get_detalle_stock, name='get-detalle-stock'),
+    path('get-reporte-productos-sin-registro/sucursal/<int:sucursal_id>', views.get_reporte_productos_sin_registro, name='get-reporte-productos-sin-registro'),
+    path('get-detalle-sin-registro/codigo/<str:codigo_pos>/sucursal/<int:sucursal_id>', views.get_detalle_sin_registro, name='get-detalle-sin-registro'),
 ]

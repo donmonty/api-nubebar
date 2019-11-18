@@ -2562,17 +2562,55 @@ def crear_botella_nueva(request):
 
             payload['peso_nueva'] = None
 
-        
-        # Serializamos el payload
-        serializer = serializers.BotellaNuevaSerializer(data=payload, partial=True)
+        """
+        ------------------------------------------------------------------------------------------
+        Serializamos el payload:
 
+        - CASO 1: Si el payload no incluye el tipo de captura, usamos el serializer estandar
+        - CASO 2: Si el payload especifica captura de tipo manual, usamos un serilizador especial
+        -------------------------------------------------------------------------------------------
+        """
+        # CASO 1: CAPTURA CON LECTOR DE SMARTPHONE
+
+        if 'captura_folio' not in request.data:
+
+            serializer = serializers.BotellaNuevaSerializer(data=payload, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+        # CASO 2: CAPTURA MANUAL
+
+        if 'captura_folio' in request.data:
+            # Tomamos el folio y eliminamos cualquier guion medio
+            payload['folio'] = payload['folio'].replace('-', '')
+
+            # Si el folio resultante es '', retornamos un error
+            if payload['folio'] == '':
+                response = {
+                    'status': 'error',
+                    'message': 'El número de folio está vacío.'
+                }
+                return Response(response)
+
+        # Si el folio resultante tiene más de 12 caracteres
+        if len(payload['folio']) > 12:
+            response = {
+                'status': 'error',
+                'message': 'El folio del SAT no debe contener más de 13 caracteres.'
+            }
+            return Response(response)
+
+        # Serializamos el payload
+        serializer = serializers.BotellaNuevaSerializerFolioManual(data=payload, partial=True)
         if serializer.is_valid():
             serializer.save()
-        
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)

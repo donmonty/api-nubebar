@@ -26,6 +26,7 @@ from inventarios.serializers import (
                                         BotellaConsultaSerializer,
                                         ProveedorSerializer,
                                         BotellaProductoSerializer,
+                                        BotellaNuevaSerializerFolioManual
                                     )
 
 import datetime
@@ -2715,5 +2716,419 @@ class MovimientosTests(TestCase):
 
         # Checamos que el estado de la botella creada sea '1', o sea, usada
         self.assertEqual(botella_creada.estado, '1')
+
+    
+    #-----------------------------------------------------------------------------
+    def test_serializer_botella_nueva_manual_1(self):
+        """
+        -------------------------------------------------------------
+        Test para el serializador 'BotellaNuevaSerializerFolioManual"
+        - CASO: Folio SAT OK
+        -------------------------------------------------------------
+        """
+
+        # Construimos el payload
+        payload = {
+            'folio': 'Ii0123456789',
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'proveedor': self.vinos_america.id,
+            'producto': self.producto_licor43.id,
+            'peso_nueva': 1352
+        }
+
+        # Definimos el folio en su formato correcto
+        folio_ok = 'Ii0123456789'
+
+        # Deserializamos el payload
+        serializer = BotellaNuevaSerializerFolioManual(data=payload, partial=True)
+        serializer.is_valid()
+        
+        #print('::: SERIALIZER - VALIDEZ :::')
+        #print(serializer.is_valid())
+
+        #print('::: SERIALIZER - ERRORS :::')
+        #print(serializer.errors)
+
+        # Guardamos la botella en la base de datos
+        serializer.save()
+
+        # Tomamos la botella recién creada
+        botella_nueva = models.Botella.objects.latest('fecha_registro')
+        
+        # Checamos que el folio de la botella nueva sea correcto
+        self.assertEqual(botella_nueva.folio, folio_ok)
+
+
+    #-----------------------------------------------------------------------------
+    def test_serializer_botella_nueva_manual_2(self):
+        """
+        -------------------------------------------------------------
+        Test para el serializador 'BotellaNuevaSerializerFolioManual"
+        - CASO: Folio SAT con prefijo correcto pero mal formato
+        -------------------------------------------------------------
+        """
+
+        # Construimos el payload
+        payload = {
+            'folio': 'ii0123456789',
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'proveedor': self.vinos_america.id,
+            'producto': self.producto_licor43.id,
+            'peso_nueva': 1352
+        }
+
+        # Definimos el folio en su formato correcto
+        folio_ok = 'Ii0123456789'
+
+        # Deserializamos el payload
+        serializer = BotellaNuevaSerializerFolioManual(data=payload, partial=True)
+        serializer.is_valid()
+        
+        #print('::: SERIALIZER - VALIDEZ :::')
+        #print(serializer.is_valid())
+
+        #print('::: SERIALIZER - ERRORS :::')
+        #print(serializer.errors)
+
+        # Guardamos la botella en la base de datos
+        serializer.save()
+
+        # Tomamos la botella recién creada
+        botella_nueva = models.Botella.objects.latest('fecha_registro')
+        
+        # Checamos que el folio de la botella nueva sea correcto
+        self.assertEqual(botella_nueva.folio, folio_ok)
+
+
+    #-----------------------------------------------------------------------------
+    def test_serializer_botella_nueva_manual_3(self):
+        """
+        -------------------------------------------------------------
+        Test para el serializador 'BotellaNuevaSerializerFolioManual"
+        - CASO: Folio custom OK
+        -------------------------------------------------------------
+        """
+
+        # Construimos el payload
+        payload = {
+            'folio': '1',
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'proveedor': self.vinos_america.id,
+            'producto': self.producto_licor43.id,
+            'peso_nueva': 1352
+        }
+
+        # Definimos el folio en su formato correcto
+        folio_ok = '11'
+
+        # Deserializamos el payload
+        serializer = BotellaNuevaSerializerFolioManual(data=payload, partial=True)
+        serializer.is_valid()
+        
+        #print('::: SERIALIZER - VALIDEZ :::')
+        #print(serializer.is_valid())
+
+        #print('::: SERIALIZER - ERRORS :::')
+        #print(serializer.errors)
+
+        # Guardamos la botella en la base de datos
+        serializer.save()
+
+        # Tomamos la botella recién creada
+        botella_nueva = models.Botella.objects.latest('fecha_registro')
+        
+        # Checamos que el folio de la botella nueva sea correcto
+        self.assertEqual(botella_nueva.folio, folio_ok)
+
+
+    #-----------------------------------------------------------------------------
+    def test_serializer_botella_nueva_manual_4(self):
+        """
+        -------------------------------------------------------------
+        Test para el serializador 'BotellaNuevaSerializerFolioManual"
+        - CASO: Folio custom con caracteres que no son dígitos
+        -------------------------------------------------------------
+        """
+
+        # Construimos el payload
+        payload = {
+            'folio': 'A1',
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'proveedor': self.vinos_america.id,
+            'producto': self.producto_licor43.id,
+            'peso_nueva': 1352
+        }
+
+        # Definimos el folio en su formato correcto
+        #folio_ok = '11'
+
+        # Deserializamos el payload
+        serializer = BotellaNuevaSerializerFolioManual(data=payload, partial=True)
+        serializer.is_valid()
+        
+        #print('::: SERIALIZER - VALIDEZ :::')
+        #print(serializer.is_valid())
+
+        #print('::: SERIALIZER - ERRORS :::')
+        #print(serializer.errors)
+
+        # Guardamos la botella en la base de datos
+        #serializer.save()
+
+        # Tomamos la botella recién creada
+        #botella_nueva = models.Botella.objects.latest('fecha_registro')
+        
+        # Checamos que el mensaje de error sea el esperado
+        mensaje_error = 'El folio solo puede contener hasta 4 digitos del 0 al 9.'
+        self.assertEqual(serializer.errors['folio'][0], mensaje_error)
+
+
+    #-----------------------------------------------------------------------------
+    def test_serializer_botella_nueva_manual_5(self):
+        """
+        -------------------------------------------------------------
+        Test para el serializador 'BotellaNuevaSerializerFolioManual"
+        - CASO: Folio con typo en el prefijo
+        -------------------------------------------------------------
+        """
+
+        # Construimos el payload
+        payload = {
+            'folio': 'Li0123456789',
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'proveedor': self.vinos_america.id,
+            'producto': self.producto_licor43.id,
+            'peso_nueva': 1352
+        }
+
+        # Definimos el folio en su formato correcto
+        #folio_ok = '11'
+
+        # Deserializamos el payload
+        serializer = BotellaNuevaSerializerFolioManual(data=payload, partial=True)
+        serializer.is_valid()
+        
+        #print('::: SERIALIZER - VALIDEZ :::')
+        #print(serializer.is_valid())
+
+        #print('::: SERIALIZER - ERRORS :::')
+        #print(serializer.errors)
+
+        # Guardamos la botella en la base de datos
+        #serializer.save()
+
+        # Tomamos la botella recién creada
+        #botella_nueva = models.Botella.objects.latest('fecha_registro')
+        
+        # Checamos que el mensaje de error sea el esperado
+        mensaje_error = 'Los primeros dos caracteres del folio del SAT deben ser Nn o Ii.'
+        self.assertEqual(serializer.errors['folio'][0], mensaje_error)
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_folio_manual_1(self):
+        """
+        ----------------------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que se crea con éxito una botella nueva cuando el folio se captura manualmente.
+        - CASO: Folio SAT OK
+        -----------------------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': 'Nn1644803750',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'proveedor': self.vinos_america.id,
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado la botella
+        self.assertTrue(models.Botella.objects.get(id=response.data['id']))
+
+        # Tomamos la botella recien creada
+        botella_creada = models.Botella.objects.get(id=response.data['id'])
+
+        # Checamos que el folio de la botella creada sea igual al del payload
+        self.assertEqual(payload['folio'], botella_creada.folio)
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_folio_manual_2(self):
+        """
+        ----------------------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que se crea con éxito una botella nueva cuando el folio se captura manualmente.
+        - CASO: Folio SAT con guion
+        -----------------------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': 'Nn-1644803750',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'proveedor': self.vinos_america.id,
+            'captura_folio': 'MANUAL'
+        }
+
+        folio_ok = 'Nn1644803750'
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado la botella
+        self.assertTrue(models.Botella.objects.get(id=response.data['id']))
+
+        # Tomamos la botella recien creada
+        botella_creada = models.Botella.objects.get(id=response.data['id'])
+
+        # Checamos que el folio de la botella creada sea igual al del payload
+        self.assertEqual(botella_creada.folio, folio_ok)
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_folio_manual_3(self):
+        """
+        ----------------------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que se crea con éxito una botella nueva cuando el folio se captura manualmente.
+        - CASO: Folio vacío
+        -----------------------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': '',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'proveedor': self.vinos_america.id,
+            'captura_folio': 'MANUAL'
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que el mensaje de error sea el esperado
+        mensaje_error = 'El número de folio está vacío.'
+        self.assertEqual(response.data['message'], mensaje_error)
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_folio_manual_4(self):
+        """
+        ----------------------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que se crea con éxito una botella nueva cuando el folio se captura manualmente.
+        - CASO: Folio con más de 12 caracteres
+        -----------------------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': 'Nn-01234567890',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'proveedor': self.vinos_america.id,
+            'captura_folio': 'MANUAL'
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que el mensaje de error sea el esperado
+        mensaje_error = 'El folio del SAT no debe contener más de 13 caracteres.'
+        self.assertEqual(response.data['message'], mensaje_error)
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_botella_nueva_folio_manual_5(self):
+        """
+        ----------------------------------------------------------------------------------------
+        Test para el endpoint 'crear_botella_nueva'
+        - Testear que se crea con éxito una botella nueva cuando el folio se captura manualmente.
+        - CASO: Folio custom OK
+        -----------------------------------------------------------------------------------------
+        """
+
+        # Creamos el payload para el request
+        payload = {
+            'folio': '1',
+            'producto' : self.producto_siete_leguas_reposado_1000_01.id,
+            'usuario_alta': self.usuario.id,
+            'sucursal': self.magno_brasserie.id,
+            'almacen': self.barra_1.id,
+            'peso_nueva': 1550,
+            'proveedor': self.vinos_america.id,
+            'captura_folio': 'MANUAL'
+        }
+
+        folio_ok = str(self.magno_brasserie.id) + payload['folio']
+
+        # Construimos el request
+        url = reverse('inventarios:crear-botella-nueva')
+        response = self.client.post(url, payload)
+        json_response = json.dumps(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+        #print(response.data)
+
+        # Checamos que se haya creado la botella
+        self.assertTrue(models.Botella.objects.get(id=response.data['id']))
+
+        # Tomamos la botella recien creada
+        botella_creada = models.Botella.objects.get(id=response.data['id'])
+
+        # Checamos que el folio de la botella creada sea igual al folio_ok
+        self.assertEqual(botella_creada.folio, folio_ok)
+
+        
+
+        
 
 

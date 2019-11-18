@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from core import models
 import datetime
+import re
 from django.utils.timezone import make_aware
 
 
@@ -1653,6 +1654,259 @@ class BotellaUsadaSerializer(serializers.ModelSerializer):
             almacen=validated_data.get('almacen'),
             proveedor=validated_data.get('proveedor'),
             estado=estado_botella,
+
+        )
+
+        return botella
+
+
+"""
+-------------------------------------------------------------------
+Serializer que construye una Botella nueva cuando el usuario captura
+manualmente el folio
+-------------------------------------------------------------------
+"""
+class BotellaNuevaSerializerFolioManual(serializers.ModelSerializer):
+
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'almacen',
+            'sucursal',
+            'usuario_alta',
+            'proveedor',
+            'producto',
+            'folio',
+            'peso_nueva',
+        )
+
+        extra_kwargs = {
+            'peso_nueva': {'required': False},
+        }
+
+    """
+    ---------------------------------------------------------------------------
+    Validamos el folio capturado manualmente por el usuario
+    ---------------------------------------------------------------------------
+    """
+    def validate_folio(self, value):
+
+        # Si folio es un empty string, retornamos un error
+        if value == '':
+            raise serializers.ValidationError("El número de folio está vacío.")
+
+        # Checamos la longitud del folio
+        length_folio = len(value)
+
+        """
+        -----------------------------------------------------------------------------------
+        Si el folio tiene entre 1 y 4 caracteres, asumimos que se trata de un folio custom:
+        -----------------------------------------------------------------------------------
+        """
+        if length_folio <= 4:
+
+            # Checamos que solo contenga digitos
+            if re.match('^[0-9]*$', value):
+                # Si solo contiene digitos, construimos el folio custom concatenando la sucursal y el folio capturado por el usuario
+                #sucursal_id = validated_data.get('sucursal').id
+                #sucursal_id = str(sucursal_id)
+                #value = sucursal_id + value
+                return value
+
+            # Si no contiene solo digitos, retornamos un error
+            raise serializers.ValidationError("El folio solo puede contener hasta 4 digitos del 0 al 9.")
+
+        
+        """
+        ---------------------------------------------------------------------------
+        Si el folio contiene 12 caracteres, asumimos que es un folio del SAT sin
+        guion
+        ---------------------------------------------------------------------------
+        """
+        # Checamos si el folio tiene 12 caracteres
+        if length_folio == 12:
+            # Tomamos los primeros dos caracteres del folio
+            prefijo = value[:2]
+            numero_folio = value[2:]
+
+            # Checamos si los dos caracteres son de tipo folio nacional
+            if re.match('(Nn|nN|nn|NN)', prefijo):
+                prefijo = 'Nn'
+                # Checamos si el numero del folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+                # Si el numero de folio no contiene solo digitos, retornamos un error
+                raise serializers.ValidationError("El folio del SAT debe tener solo 10 dígitos.")
+
+            # Checamos si los dos caracteres son de tipo folio importado
+            if re.match('(Ii|iI|ii|II)', prefijo):
+                prefijo = 'Ii'
+                # Checamos si el numero del folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+                # Si el numero de folio no contiene solo digitos, retornamos un error
+                raise serializers.ValidationError("El folio del SAT debe contener solo 10 dígitos.")
+            
+            # Si los dos caracteres no son de folio nacional o importado, retornamos error
+            raise serializers.ValidationError("Los primeros dos caracteres del folio del SAT deben ser Nn o Ii.")
+
+        """
+        -----------------------------------------------------------------
+        Si el folio es de 13 caracteres, asumimos que es un folio del SAT
+        y que contiene al menos un guion
+        -----------------------------------------------------------------
+        """
+        if length_folio == 13:
+            # Eliminamos los guiones en el folio
+            value = value.replace('-', '')
+
+            # Si el folio resultante tiene menos de 12 caracteres, retornamos error
+            if len(value) < 12:
+                raise serializers.ValidationError('El folio del SAT solo debe contener un guion.')
+
+            # Si el folio resultante sigue siendo de 13 caracteres, retornamos error
+            if len(value) == 13:
+                raise serializers.ValidationError('El folio del SAT no puede tener más de 12 caracteres')
+
+            # Si el folio resultante es de 12 caracteres, continuamos
+
+            # Tomamos los dos primeros caracteres del folio
+            prefijo = value[:2]
+            numero_folio = value[2:]
+
+            # Checamos si los dos caracteres son de tipo folio nacional
+            if re.match('(Nn|nN|nn|NN)', prefijo):
+                prefijo = 'Nn'
+                # Checamos si el numero de folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+
+                # Si el numero de folio no contiene unicamente digitos, retornamos un error
+                raise serializers.ValidationError('El folio del SAT debe contener solo 10 digitos.')
+
+            # Checamos si los dos caracteres son de tipo folio importado
+            if re.match('(Ii|iI|ii|II)', prefijo):
+                prefijo = 'Ii'
+                # Checamos si el numero de folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+
+                # Si el numero de folio no contiene unicamente digitos, retornamos un error
+                raise serializers.ValidationError('El folio del SAT debe contener solo 10 digitos.')
+
+            # Si los dos caracteres no son de folio nacional o importado, retornamos un error
+            raise serializers.ValidationError('Los primeros dos caracteres del folio del SAT deben ser Nn o Ii.')
+
+        """
+        --------------------------------------------------------------------------
+        Si el folio tiene más de 4 caracteres, pero no tiene 12 ni 13 caracteres,
+        retornamos un error
+        --------------------------------------------------------------------------
+        """
+        raise serializers.ValidationError("El folio del SAT debe ser de 12 caracteres.")
+
+
+    def create(self, validated_data):
+
+        peso_nueva = validated_data.get('peso_nueva')
+        producto = validated_data.get('producto')
+        ingrediente = producto.ingrediente
+        precio_unitario = producto.precio_unitario
+        capacidad = producto.capacidad
+        factor_peso = ingrediente.factor_peso
+
+        # Si contamos con el peso de la botella medido con la bascula:
+        if peso_nueva is not None:
+
+            peso_inicial = peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+            # Si el blueprint no cuenta con 'peso_nueva', le asignamos uno de referencia temporal
+            if producto.peso_nueva is None:
+                
+                producto.peso_nueva = peso_nueva
+                producto.save()
+
+        # Si no contamos con el peso medido con la bascula (pasa solo cuando registramos un vino de mesa):
+        else:
+
+            # Todos los blueprints de vinos de mesa deben por fuerza contar con 'peso_nueva'
+            peso_nueva = producto.peso_nueva
+            peso_inicial = producto.peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+        """
+        -----------------------------------------------
+        Procesamos los folios custom
+        -----------------------------------------------
+        """
+        # Tomamos el folio del payload
+        folio = validated_data.get('folio')
+
+        # Tomamos el ID de la sucursal
+        sucursal_id = str(validated_data.get('sucursal').id)
+
+        # Si el folio es custom, le adjuntamos el ID de la sucursal
+        if re.match('^[0-9]*$', folio):
+            folio = sucursal_id + folio
+        
+        # Si el folio no es custom, lo dejamos como está
+        else:
+            folio = folio
+
+        #-------------------------------------------------
+
+        # Creamos la botella
+        botella = models.Botella.objects.create(
+
+            # Datos tomados del blueprint y la bascula
+            producto=producto,
+            peso_nueva=peso_nueva,
+            peso_inicial=peso_inicial,
+            peso_cristal=peso_cristal,
+            peso_actual=peso_inicial,
+            precio_unitario=precio_unitario,
+
+            # Datos del marbete:
+            folio=folio,
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+
+            # Datos del producto en marbete:
+            nombre_marca='',
+            tipo_producto='',
+            graduacion_alcoholica='',
+            capacidad=capacidad,
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos adicionales:
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            proveedor=validated_data.get('proveedor')
 
         )
 

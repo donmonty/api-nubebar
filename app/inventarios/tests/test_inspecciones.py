@@ -19,7 +19,8 @@ from inventarios.serializers import (
                                         SucursalSerializer,
                                         SucursalDetalleSerializer,
                                         InspeccionUpdateSerializer,
-                                        ProductoIngredienteSerializer
+                                        ProductoIngredienteSerializer,
+                                        BotellaNuevaSerializerFolioManual
                                     )
 
 import datetime
@@ -2646,8 +2647,6 @@ class InspeccionesTests(TestCase):
         self.assertEqual(item_inspeccion_1.peso_botella, botella_licor43_2.peso_nueva)
         # Checamos que el 'peso_actual' de la botella sea igual a 'peso_nueva'
         self.assertEqual(botella_licor43_2.peso_actual, botella_licor43_2.peso_nueva)
-
-
 
 
 class TestInspeccionesPublicAPI(TestCase):

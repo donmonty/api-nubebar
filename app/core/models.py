@@ -505,15 +505,16 @@ en la base de datos
 """
 
 class ProductoSinRegistro(models.Model):
-
-    sucursal    = models.CharField(max_length=255, blank=True)
-    codigo_pos  = models.CharField(max_length=255, blank=True)
-    caja        = models.IntegerField(null=True, blank=True)
-    nombre      = models.CharField(max_length=255, blank=True)
-    fecha       = models.DateField(blank=True, null=True, default=datetime.date.today)
-
-    def __str__(self):
-        return 'SUCURSAL: {} - CODIGO: {} - NOMBRE: {}'.format(self.sucursal, self.codigo_pos, self.nombre)
+	sucursal    = models.ForeignKey(Sucursal, related_name='productos_sin_registro', on_delete=models.CASCADE)
+	codigo_pos  = models.CharField(max_length=255, blank=True)
+	caja        = models.IntegerField(null=True, blank=True)
+	nombre      = models.CharField(max_length=255, blank=True)
+	fecha       = models.DateField(blank=True, null=True, default=datetime.date.today)
+	unidades 	= models.IntegerField(null=True, blank=True)
+	importe 	= models.IntegerField(null=True, blank=True)
+	
+	def __str__(self):
+		return 'SUCURSAL: {} - CODIGO: {} - NOMBRE: {}'.format(self.sucursal.nombre, self.codigo_pos, self.nombre)
 
 
 """

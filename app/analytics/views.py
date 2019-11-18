@@ -18,6 +18,7 @@ from analytics import serializers
 from analytics import reporte_costo_stock as cs
 from analytics import reporte_mermas as rm
 from analytics import reporte_stock as rs
+from analytics import reporte_productos_sin_registro as r_sin_registro
 from core import models
 
 
@@ -223,5 +224,51 @@ def get_detalle_stock(request, producto_id, sucursal_id):
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para ver el Reporte de Productos Sin Registro
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_reporte_productos_sin_registro(request, sucursal_id):
+
+    if request.method == 'GET':
+
+        # Tomamos la sucursal
+        #sucursal_id = int(sucursal_id)
+        sucursal = models.Sucursal.objects.get(id=sucursal_id)
+
+        # Ejecutamos el reporte
+        reporte = r_sin_registro.get_productos_sin_registro(sucursal)
+
+        # Retornamos el response
+        return Response(reporte)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para ver todas las instancias de un ProductoSinRegistro
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_detalle_sin_registro(request, codigo_pos, sucursal_id):
+
+    if request.method == 'GET':
+
+        # Ejecutamos el reporte
+        reporte = r_sin_registro.get_detalle_sin_registro(codigo_pos, sucursal_id)
+
+        return Response(reporte)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
