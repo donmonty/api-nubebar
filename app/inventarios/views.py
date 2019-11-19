@@ -11,6 +11,7 @@ from django.db.models import F, Q, QuerySet, Avg, Count, Sum, Subquery, OuterRef
 from django.shortcuts import get_object_or_404
 import math
 import json
+import re
 
 from inventarios import serializers
 from inventarios import scrapper, scrapper_2
@@ -1016,6 +1017,13 @@ def detalle_botella_inspeccion(request, inspeccion_id, folio_id):
 
         inspeccion_id = int(inspeccion_id)
 
+        # Si se trata de un folio custom, le adjuntamos el numero de la sucursal
+        if re.match('^[0-9]*$', folio_id):
+
+            inspeccion = models.Inspeccion.objects.get(id=inspeccion_id)
+            sucursal_id = str(inspeccion.sucursal.id)
+            folio_id = sucursal_id + folio_id
+
         # Checamos que la botella escaneada pertenezca a la Inspección en curso
         if models.ItemInspeccion.objects.filter(inspeccion__id=inspeccion_id, botella__folio=folio_id).exists():
             item_inspeccion = models.ItemInspeccion.objects.get(inspeccion__id=inspeccion_id, botella__folio=folio_id)
@@ -1032,6 +1040,9 @@ def detalle_botella_inspeccion(request, inspeccion_id, folio_id):
         # Si la botella no pertenece a la Inspección en curso, notificamos al usuario
         else:
             return Response({'mensaje': 'Esta botella no es parte de la inspección.'})
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -2849,16 +2860,55 @@ def crear_botella_usada(request):
         payload['peso_nueva'] = request.data['peso_nueva']
         payload['peso_inicial'] = request.data['peso_bascula']
 
-        # Serializamos el payload
-        serializer = serializers.BotellaUsadaSerializer(data=payload, partial=True)
+        """
+        ------------------------------------------------------------------------------------------
+        Serializamos el payload:
 
+        - CASO 1: Si el payload no incluye el tipo de captura, usamos el serializer estandar
+        - CASO 2: Si el payload especifica captura de tipo manual, usamos un serilizador especial
+        -------------------------------------------------------------------------------------------
+        """
+        # CASO 1: CAPTURA CON LECTOR DE SMARTPHONE
+
+        if 'captura_folio' not in request.data:
+
+            serializer = serializers.BotellaUsadaSerializer(data=payload, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+        # CASO 2: CAPTURA MANUAL
+
+        if 'captura_folio' in request.data:
+            # Tomamos el folio y eliminamos cualquier guion medio
+            payload['folio'] = payload['folio'].replace('-', '')
+
+            # Si el folio resultante es '', retornamos un error
+            if payload['folio'] == '':
+                response = {
+                    'status': 'error',
+                    'message': 'El número de folio está vacío.'
+                }
+                return Response(response)
+
+        # Si el folio resultante tiene más de 12 caracteres
+        if len(payload['folio']) > 12:
+            response = {
+                'status': 'error',
+                'message': 'El folio del SAT no debe contener más de 13 caracteres.'
+            }
+            return Response(response)
+
+        # Serializamos el payload
+        serializer = serializers.BotellaUsadaSerializerFolioManual(data=payload, partial=True)
         if serializer.is_valid():
             serializer.save()
-        
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -2924,4 +2974,5 @@ def update_botella_nueva_vacia(request):
 
     # Si el request no es PATCH, notificamos error
     else:
-        return Response(status=status.HTTP_400_BAD_REQUEST) 
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+

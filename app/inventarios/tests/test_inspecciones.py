@@ -1970,6 +1970,66 @@ class InspeccionesTests(TestCase):
 
 
     #-----------------------------------------------------------------------------
+    def test_detalle_botella_inspeccion_folio_custom(self):
+        """ 
+        Testear el endpoint 'detalle_botella_inspeccion' cuando la botella
+        tiene un folio custom
+        """
+
+        folio_custom = str(self.magno_brasserie.id) + '1'
+
+        # Creamos una botella con el folio custom
+        botella_folio_custom = models.Botella.objects.create(
+            folio=folio_custom,
+            producto=self.producto_licor43,
+            capacidad=700,
+            peso_nueva=1165,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+            nombre_marca='LICOR 43',
+        ) 
+
+        # Definimos el historial de inspecciones de nuestra botella de Licor 43
+        with freeze_time("2019-05-01"):
+            # Inspeccion 1
+            inspeccion_1 = models.Inspeccion.objects.create(
+                almacen=self.barra_1,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+            )
+
+            # ItemsInspeccion de la Inspeccion 1
+            item_inspeccion_1 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_1,
+                botella=botella_folio_custom,
+                peso_botella = 1000,
+                inspeccionado=False
+            )
+
+        # Tomamos el ItemInspeccion y lo serializamos
+        serializer = ItemInspeccionDetalleSerializer(item_inspeccion_1)
+        #print('::: SERIALIZER DATA :::')
+        #print(serializer.data)
+
+        # Hacemos el request
+        parametros = {
+            'inspeccion_id': inspeccion_1.id,
+            'folio_id': '1'
+        }
+        url = reverse('inventarios:get-detalle-botella-inspeccion', kwargs=parametros)
+        response = self.client.get(url)
+
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)        
+
+        # Checamos que el request sea exitoso
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+    #-----------------------------------------------------------------------------
     def test_lista_sucursales(self):
         """ Testear que se muestra la lista de sucursales asignadas al usuario del request """
 
