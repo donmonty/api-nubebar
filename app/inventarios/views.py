@@ -2253,14 +2253,14 @@ def get_servicios_usuario(request):
         servicios_superuser = {
             'Movimientos': ['Alta Botella', 'Traspaso Botella', 'Baja Botella'],
             'Inspecciones': ['Inventario Total', 'Inventario Rápido'],
-            'Consultas': ['Inventario', 'Botella'],
+            'Consultas': ['Inventario', 'Botella', 'Folios Especiales'],
             'Ingrediente Nuevo': 'Ingrediente Nuevo',
             'Producto Nuevo': 'Producto Nuevo'        
         }
         servicios_user = {
             'Movimientos': ['Alta Botella', 'Traspaso Botella'],
             'Inspecciones': ['Inventario Total', 'Inventario Rápido'],
-            'Consultas': ['Inventario', 'Botella']   
+            'Consultas': ['Inventario', 'Botella', 'Folios Especiales']   
         }
         
         if usuario.is_superuser:
@@ -2975,4 +2975,67 @@ def update_botella_nueva_vacia(request):
     # Si el request no es PATCH, notificamos error
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que muestra una lista con los números de folios custom más recientes
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_folios_especiales(request, sucursal_id):
+
+    if request.method == 'GET':
+
+        # Tomamos la sucursal
+        sucursal = models.Sucursal.objects.get(id=sucursal_id)
+
+        # Tomamos los últimos 10 folios especiales de la sucursal
+        folios_custom = models.Botella.objects.filter(sucursal=sucursal)
+        folios_custom = folios_custom.exclude(Q(folio__startswith='Nn') | Q(folio__startswith='Ii'))
+        folios_custom = folios_custom[:10]
+
+        #print('::: FOLIOS ESPECIALES :::')
+        #print([botella.folio for botella in folios_custom])
+
+        # Si hay al menos un folio especial, retornamos una lista
+        if folios_custom.count() > 0:
+
+            # Creamos un generator con los items del queryset
+            generator_botellas = (botella for botella in folios_custom)
+
+            # Creamos otro generator para iterar por el anterior y convertir los folios a INT
+            folios_int = (int(botella.folio) for botella in generator_botellas)
+            
+            # Convertimos el generator en una lista y la ordenamos de mayor a menor
+            folios_ordenados = list(folios_int)
+
+            #print('::: FOLIOS DESORDENADOS :::')
+            #print(folios_ordenados)
+
+            folios_ordenados = sorted(folios_ordenados, reverse=True)
+
+            #print('::: FOLIOS ORDENADOS :::')
+            #print(folios_ordenados)
+
+            # Construimos el response
+            response = {
+                'status': 'success',
+                'data': folios_ordenados
+            }
+
+            return Response(response)
+
+        # Si no hay folios especiales, notificamos al cliente
+        response = {
+            'status': 'error',
+            'message': 'No hay folios especiales en esta sucursal.'
+        }
+        return Response(response)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 

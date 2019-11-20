@@ -3511,3 +3511,83 @@ class MovimientosTests(TestCase):
 
         # Checamos que el folio de la botella creada sea igual al folio_ok
         self.assertEqual(botella_creada.folio, folio_ok)
+
+
+    #-----------------------------------------------------------------------------
+    def test_get_folios_especiales_ok(self):
+        """
+        ----------------------------------------------------------------------------------------
+        Test para el endpoint 'get_folios_especiales'
+        - Testear que se obtiene una lista con los folios especiales más recientes
+        -----------------------------------------------------------------------------------------
+        """
+
+        # Creamos 3 botellas con folios especiales
+        botella_especial_01 = models.Botella.objects.create(
+            folio='11',
+            producto=self.producto_larios,
+            capacidad=700,
+            peso_nueva=1165,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+        )
+
+        botella_especial_02 = models.Botella.objects.create(
+            folio='199',
+            producto=self.producto_larios,
+            capacidad=700,
+            peso_nueva=1165,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+        )
+
+        botella_especial_03 = models.Botella.objects.create(
+            folio='120',
+            producto=self.producto_larios,
+            capacidad=700,
+            peso_nueva=1165,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+        )
+
+
+        # Construimos el response
+        url = reverse('inventarios:get-folios-especiales', args=[self.magno_brasserie.id])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+
+        #print('::: RESPONSE DATA :::')
+        #print(json_response)
+
+        # Construimos la lista de folios esperada
+        lista_folios_ok = [botella_especial_02.folio, botella_especial_03.folio, botella_especial_01.folio]
+        lista_folios_ok = [int(folio) for folio in lista_folios_ok]
+        lista_folios_ok = sorted(lista_folios_ok, reverse=True)
+
+        # Checamos que el orden de la lista sea correcto
+        self.assertEqual(response.data['data'][0], lista_folios_ok[0])
+        self.assertEqual(response.data['data'][1], lista_folios_ok[1])
+        self.assertEqual(response.data['data'][2], lista_folios_ok[2])
+
+
+    #-----------------------------------------------------------------------------
+    def test_get_folios_especiales_error(self):
+        """
+        ----------------------------------------------------------------------------------------
+        Test para el endpoint 'get_folios_especiales'
+        - Testear cuando la sucursal no tiene folios especiales
+        -----------------------------------------------------------------------------------------
+        """
+
+        # Construimos el response
+        url = reverse('inventarios:get-folios-especiales', args=[self.magno_brasserie.id])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+
+        self.assertEqual(response.data['status'], 'error')

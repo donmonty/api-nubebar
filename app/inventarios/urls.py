@@ -57,6 +57,7 @@ urlpatterns = [
     path('crear-producto-v3/', views.crear_producto_v3, name='crear-producto-v3'),
     path('get-match-botella/folio/<str:folio_id>', views.get_match_botella, name='get-match-botella'),
     path('crear-botella-usada/', views.crear_botella_usada, name='crear-botella-usada'),
+    path('get-folios-especiales/sucursal/<int:sucursal_id>', views.get_folios_especiales, name='get-folios-especiales'),
     #path('get-inspeccion/<int:inspeccion_id>', views.DetalleInspeccionView.as_view(), name='detalle-inspeccion'),
     #path('get-inspecciones/sucursal/<int:sucursal_id>/almacen/<int:almacen_id>', views.ListaInspeccionesView.as_view(), name='lista-inspecciones')
     #path('inspecciones/sucursal/<int:sucursal_id>/almacen/<int:almacen_id>', views.InspeccionDisplayViewSet, 'get-inspecciones')
