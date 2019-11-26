@@ -18,6 +18,7 @@ from analytics import serializers
 from analytics import reporte_costo_stock as cs
 from analytics import reporte_mermas as rm
 from analytics import reporte_stock as rs
+from analytics import reporte_restock as restock
 from analytics import reporte_productos_sin_registro as r_sin_registro
 from core import models
 
@@ -272,3 +273,22 @@ def get_detalle_sin_registro(request, codigo_pos, sucursal_id):
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
+"""
+-----------------------------------------------------------------------------------
+Endpoint para el Reporte de Restock
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_reporte_restock(request, sucursal_id):
+
+    if request.method == 'GET':
+
+        # Ejecutamos el reporte
+        reporte = restock.calcular_restock(sucursal_id)
+
+        return Response(reporte)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
