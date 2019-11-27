@@ -1752,7 +1752,7 @@ class MovimientosTests(TestCase):
         #print(response.data)
 
         # Checamos el mensaje del response
-        self.assertEqual(response.data['mensaje'], 'No se puede hacer el traspaso porque la botella no está registrada.')
+        self.assertEqual(response.data['message'], 'No se puede hacer el traspaso porque la botella no está registrada.')
 
 
     #-----------------------------------------------------------------------------
@@ -1793,7 +1793,7 @@ class MovimientosTests(TestCase):
         #print(response.data)
 
         # Checamos el mensaje del response
-        self.assertEqual(response.data['mensaje'], 'Esta botella está registrada como VACIA.')
+        self.assertEqual(response.data['message'], 'Esta botella está registrada como VACIA.')
 
 
     #-----------------------------------------------------------------------------
@@ -1834,7 +1834,7 @@ class MovimientosTests(TestCase):
         #print(response.data)
 
         # Checamos el mensaje del response
-        self.assertEqual(response.data['mensaje'], 'Esta botella está registrada como PERDIDA.')
+        self.assertEqual(response.data['message'], 'Esta botella está registrada como PERDIDA.')
 
 
     #-----------------------------------------------------------------------------
@@ -1859,7 +1859,55 @@ class MovimientosTests(TestCase):
         #print(response.data)
 
         # Checamos el mensaje del response
-        self.assertEqual(response.data['mensaje'], 'Esta botella ya es parte de este almacén.')
+        self.assertEqual(response.data['message'], 'Esta botella ya es parte de este almacén.')
+
+
+    #-----------------------------------------------------------------------------
+    def test_crear_traspaso_folio_especial(self):
+        """
+        Test para el ednpoint 'crear_traspaso'
+        - Testear que se procesan los folios especiales OK
+        """
+
+        # Creamos un nuevo almacén para el test
+        self.barra_2 = models.Almacen.objects.create(nombre='BARRA 2', numero=2, sucursal=self.magno_brasserie)
+
+        # Creamos una botella con folio especial para el test
+        botella_herradura_blanco_2 = models.Botella.objects.create(
+            folio='11',
+            producto=self.producto_herradura_blanco,
+            url='https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Nn1727494182',
+            capacidad=700,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+            estado='2'
+        )
+
+        # Construimos el payload
+        payload = {
+            'almacen': self.barra_2.id,
+            'sucursal': self.magno_brasserie,
+            'folio': '1',
+        }
+
+        # Construimos el request
+        url = reverse('inventarios:crear-traspaso')
+        response = self.client.post(url, payload)
+
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
+
+        # Checamos el status del response
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Checar el folio de la botella traspaada
+        botella_traspasada = models.Botella.objects.get(id=response.data['botella'])
+        self.assertEqual(botella_traspasada.folio, botella_herradura_blanco_2.folio)
+
+        # Checamos el almacen de la botella traspasada
+        self.assertEqual(botella_traspasada.almacen.id, self.barra_2.id)
 
     
     #-----------------------------------------------------------------------------

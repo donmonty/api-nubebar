@@ -2122,13 +2122,20 @@ def crear_traspaso(request):
         almacen = models.Almacen.objects.get(id=almacen_id)
         sucursal_id = almacen.sucursal.id
 
+        # Si es un folio especial hay que normalizarlo
+        if re.match('^[0-9]*$', folio_id):
+            folio_id = str(sucursal_id) + folio_id
+
         # Checamos que el folio esté registrado en la base de datos
         try:
             botella = models.Botella.objects.get(folio=folio_id)
 
         except ObjectDoesNotExist:
-            mensaje = {'mensaje': 'No se puede hacer el traspaso porque la botella no está registrada.'}
-            return Response(mensaje)
+            response = {
+                'status': 'error',
+                'message': 'No se puede hacer el traspaso porque la botella no está registrada.'
+            }
+            return Response(response)
 
         else: 
             botella = models.Botella.objects.get(folio=folio_id)
@@ -2139,19 +2146,28 @@ def crear_traspaso(request):
 
             # Checamos que el estado de la botella no sea VACIA ni PERDIDA
             if botella.estado == '0':
-                mensaje = {'mensaje': 'Esta botella está registrada como VACIA.'}
-                return Response(mensaje)
+                response = {
+                    'status': 'error',
+                    'message': 'Esta botella está registrada como VACIA.'
+                }
+                return Response(response)
 
             elif botella.estado == '3':
-                mensaje = {'mensaje': 'Esta botella está registrada como PERDIDA.'}
-                return Response(mensaje)
+                response = {
+                    'status': 'error',
+                    'message': 'Esta botella está registrada como PERDIDA.'
+                }
+                return Response(response)
 
             # Checamos que la botella no sea parte del almacén al que se quiere traspasar
             elif botella.almacen.id == almacen.id:
                 #print('::: ALMACEN ID :::')
                 #print(botella.almacen.id)
-                mensaje = {'mensaje': 'Esta botella ya es parte de este almacén.'}
-                return Response(mensaje)
+                response = {
+                    'status': 'error',
+                    'message': 'Esta botella ya es parte de este almacén.'
+                }
+                return Response(response)
 
             else:
                 # Construimos el payload para el serializer
