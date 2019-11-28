@@ -748,7 +748,8 @@ class AnalyticsTests(TestCase):
             # Agregamos 'volumen_actual'
             botellas_volumen_actual = botellas_consumo.annotate(
                 volumen_actual=ExpressionWrapper(
-                    ((F('peso_actual') - F('peso_cristal')) * F('producto__ingrediente__factor_peso')),
+                    #((F('peso_actual') - F('peso_cristal')) * F('producto__ingrediente__factor_peso')),
+                    (F('peso_actual') - F('peso_cristal')) * (2 - F('producto__ingrediente__factor_peso')),
                     output_field=DecimalField()
                 )
             )
@@ -859,12 +860,12 @@ class AnalyticsTests(TestCase):
                 'data': lista_registros
             }
 
-            #print('::: REPORTE :::')
-            #print(reporte)
+            print('::: REPORTE :::')
+            print(reporte)
 
         
         self.assertEqual(1, 1)
-        self.assertAlmostEqual(reporte['costo_total'], 2294.49)
+        self.assertAlmostEqual(reporte['costo_total'], 1644.31)
 
         # Checamos el reporte para HERRADURA BLANCO 700
         self.assertEqual(reporte['data'][0]['producto'], self.producto_herradura_blanco.nombre_marca)
@@ -876,11 +877,11 @@ class AnalyticsTests(TestCase):
 
         # Checamos el reporte para JW BLACK 750
         self.assertEqual(reporte['data'][1]['producto'], self.producto_jw_black.nombre_marca)
-        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 676.4)
+        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 747.6)
         self.assertAlmostEqual(reporte['data'][1]['demanda_ml'], 2242.8)
-        self.assertAlmostEqual(reporte['data'][1]['faltante'], 1566.4)
-        self.assertEqual(reporte['data'][1]['compra_sugerida'], 3)
-        self.assertAlmostEqual(reporte['data'][1]['total'], 1950.54)
+        self.assertAlmostEqual(reporte['data'][1]['faltante'], 1495.2)
+        self.assertEqual(reporte['data'][1]['compra_sugerida'], 2)
+        self.assertAlmostEqual(reporte['data'][1]['total'], 1300.37)
 
     
     #-----------------------------------------------------------------------------
@@ -901,7 +902,7 @@ class AnalyticsTests(TestCase):
        
 
         self.assertEqual(reporte['status'], 'success')
-        self.assertAlmostEqual(reporte['costo_total'], 2294.49)
+        self.assertAlmostEqual(reporte['costo_total'], 1644.31)
         self.assertEqual(len(reporte['data']), 2)
 
         # Checamos el reporte para HERRADURA BLANCO 700
@@ -914,11 +915,11 @@ class AnalyticsTests(TestCase):
 
         # Checamos el reporte para JW BLACK 750
         self.assertEqual(reporte['data'][1]['producto'], self.producto_jw_black.nombre_marca)
-        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 676.4)
+        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 747.6)
         self.assertAlmostEqual(reporte['data'][1]['demanda_ml'], 2242.8)
-        self.assertAlmostEqual(reporte['data'][1]['faltante'], 1566.4)
-        self.assertEqual(reporte['data'][1]['compra_sugerida'], 3)
-        self.assertAlmostEqual(reporte['data'][1]['total'], 1950.54)
+        self.assertAlmostEqual(reporte['data'][1]['faltante'], 1495.2)
+        self.assertEqual(reporte['data'][1]['compra_sugerida'], 2)
+        self.assertAlmostEqual(reporte['data'][1]['total'], 1300.37)
 
 
     #-----------------------------------------------------------------------------

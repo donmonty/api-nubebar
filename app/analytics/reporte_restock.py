@@ -100,7 +100,8 @@ def calcular_restock(sucursal_id):
     # Agregamos 'volumen_actual'
     botellas_volumen_actual = botellas_consumo.annotate(
         volumen_actual=ExpressionWrapper(
-            ((F('peso_actual') - F('peso_cristal')) * F('producto__ingrediente__factor_peso')),
+            #((F('peso_actual') - F('peso_cristal')) * F('producto__ingrediente__factor_peso')),
+            (F('peso_actual') - F('peso_cristal')) * (2 - F('producto__ingrediente__factor_peso')),
             output_field=DecimalField()
         )
     )

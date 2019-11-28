@@ -103,7 +103,7 @@ class AnalyticsTests(TestCase):
 
         self.producto_jw_black = models.Producto.objects.create(
             folio='Ii0814634647',
-            ingrediente=self.maestro_dobel,
+            ingrediente=self.jw_black,
             peso_cristal=500,
             capacidad=750,
         )
@@ -261,13 +261,31 @@ class AnalyticsTests(TestCase):
         # Ejecutamos el reporte
         reporte = cs.get_costo_stock(self.barra_1)
 
-        print('::: TEST - COSTO STOCK :::')
-        print(reporte)
+        #print('::: TEST - COSTO STOCK :::')
+        #print(reporte)
        
 
         self.assertEqual(reporte['status'], '1')
-        self.assertAlmostEqual(float(reporte['data'][0]['costo_botella']), 358.15)
-        self.assertAlmostEqual(reporte['costo_total'], 1045.51)
+
+        volumen_botella01_ok = Decimal((self.botella_licor43_2.peso_actual - self.botella_licor43_2.peso_cristal) * (2 - self.licor_43.factor_peso)).quantize(Decimal('.01'), rounding=ROUND_UP)
+        #print('VOLUMEN BOTELLA 01 OK')
+        #print(volumen_botella01_ok)
+
+        volumen_botella03_ok = Decimal((self.botella_herradura_blanco.peso_actual - self.botella_herradura_blanco.peso_cristal) * (2 - self.herradura_blanco.factor_peso)).quantize(Decimal('.01'), rounding=ROUND_UP)
+        #print('VOLUMEN BOTELLA 03 OK')
+        #print(volumen_botella03_ok)
+
+        volumen_botella04_ok = Decimal((self.botella_jw_black.peso_actual - self.botella_jw_black.peso_cristal) * (2 - self.jw_black.factor_peso)).quantize(Decimal('.01'), rounding=ROUND_UP)
+        #print('VOLUMEN BOTELLA 04 OK')
+        #print(volumen_botella04_ok)
+
+        # Checamos que el volumen de las botellas sea correcto
+        self.assertAlmostEqual(float(reporte['data'][0]['volumen_ml']), float(volumen_botella01_ok))
+        self.assertAlmostEqual(float(reporte['data'][2]['volumen_ml']), float(volumen_botella03_ok))
+        self.assertAlmostEqual(float(reporte['data'][3]['volumen_ml']), float(volumen_botella04_ok))
+
+        # Checamos que el costo total sea correcto
+        self.assertAlmostEqual(reporte['costo_total'], 1058.02)
 
 
     #-----------------------------------------------------------------------------
@@ -285,11 +303,11 @@ class AnalyticsTests(TestCase):
         response = self.client.get(url)
         json_response = json.dumps(response.data)
 
-        print('::: RESPONSE DATA :::')
-        print(response.data)
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
 
-        print('::: RESPONSE DATA - JSON :::')
-        print(json_response)
+        #print('::: RESPONSE DATA - JSON :::')
+        #print(json_response)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
