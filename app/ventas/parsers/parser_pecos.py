@@ -47,6 +47,13 @@ def parser(ventas_csv, sucursal):
         columna_int = df_ventas.loc[:, 'importe'].astype(int)
         df_ventas['importe'] = columna_int
 
+        # Aplicamos la funcion a la columna 'unidades'
+        df_ventas['unidades'] = df_ventas.unidades.apply(drop_decimals)
+
+        # Convertimos la columna 'unidades' a INT
+        columna_int = df_ventas.loc[:, 'unidades'].astype(int)
+        df_ventas['unidades'] = columna_int
+
         # Eliminamos REFRESCOS y CERVEZAS
         filtro_refrescos = df_ventas.loc[:,'categoria'].str.contains('REFRESCOS', na=False, regex=True)
         df_ventas = df_ventas[~filtro_refrescos]
