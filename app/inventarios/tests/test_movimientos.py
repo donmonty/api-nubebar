@@ -3639,3 +3639,6 @@ class MovimientosTests(TestCase):
         json_response = json.dumps(response.data)
 
         self.assertEqual(response.data['status'], 'error')
+
+
+

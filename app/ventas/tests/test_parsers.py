@@ -35,45 +35,52 @@ class ParserMagnoTests(TestCase):
             {
                 'sucursal_id': self.magno_brasserie.id,
                 'caja_id': self.caja_1.id,
-                'codigo_pos': '00050',
-                'nombre': 'CARAJILLO',
-                'unidades': 3,
-                'importe': 285
+                'codigo_pos': 'AYD000',
+                'nombre': 'MAGNO SPRITZ',
+                'unidades': 8,
+                'importe': 1400
             },
             {
                 'sucursal_id': self.magno_brasserie.id,
                 'caja_id': self.caja_1.id,
-                'codigo_pos': '00126',
-                'nombre': 'CT HERRADURA BLANCO',
+                'codigo_pos': 'AYD009',
+                'nombre': 'CHARTREUSE VERDE',
                 'unidades': 1,
-                'importe': 112
+                'importe': 270
             },
             {
                 'sucursal_id': self.magno_brasserie.id,
                 'caja_id': self.caja_1.id,
-                'codigo_pos': '00167',
-                'nombre': 'CW JOHNNIE WALKER ETIQUETA NEGR A',
-                'unidades': 2,
-                'importe': 340
+                'codigo_pos': 'AYD011',
+                'nombre': 'APEROL SPRITZ',
+                'unidades': 5,
+                'importe': 675
             },
             {
                 'sucursal_id': self.magno_brasserie.id,
                 'caja_id': self.caja_1.id,
-                'codigo_pos': '00081',
-                'nombre': 'LICOR 43',
-                'unidades': 2,
-                'importe': 170
+                'codigo_pos': 'AYD017',
+                'nombre': 'ST. GERMAIN',
+                'unidades': 1,
+                'importe': 160
             }
         ]
 
         # Definimos el path absoluto del reporte de ventas
-        path_reporte_ventas = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ventas_magno_brasserie.csv')
+        path_reporte_ventas = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ventas_magno_brasserie.xls')
 
         # Procesamos el reporte de ventas con el parser y guardamos el output en una variable
         output_parser = parser_magno_brasserie.parser(path_reporte_ventas, self.magno_brasserie)
         #print(output_parser)
+
         # Convertimos el dataframe del output en un json
         dataframe_output = output_parser['df_ventas']
+
+        # Tomamos las primeras 4 filas del dataframe
+        dataframe_output = dataframe_output.head(4)
+        #print('::: DATAFRAME OUTPUT :::')
+        #print(dataframe_output)
+
         output_parser = dataframe_output.to_json(orient='records')
         # Convertimos el json en un objeto de python
         output_parser = json.loads(output_parser)
