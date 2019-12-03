@@ -16,11 +16,13 @@ def parser(ventas_csv, sucursal):
 
     try:
 
-        wb = xlrd.open_workbook(ventas_csv, logfile=open(os.devnull, 'w'))
-        df_ventas = pd.read_excel(wb, header=None, skiprows=9, skipfooter=5, engine='xlrd')
+        #wb = xlrd.open_workbook(ventas_csv, logfile=open(os.devnull, 'w'))
+        #df_ventas = pd.read_excel(wb, header=None, skiprows=9, skipfooter=5, engine='xlrd')
+        df_ventas = pd.read_excel(ventas_csv, header=None, skiprows=9, skipfooter=5, engine='xlrd')
 
         # Eliminamos columnas innecesarias
-        to_drop = [0, 4, 6]
+        #to_drop = [0, 4, 6]
+        to_drop = [0, 4, 6, 7, 8]
         df_ventas = df_ventas.drop(to_drop, axis=1)
 
         # Renombramos las columnas
