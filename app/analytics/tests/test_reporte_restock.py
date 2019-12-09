@@ -100,7 +100,20 @@ class AnalyticsTests(TestCase):
             categoria=self.categoria_tequila,
             factor_peso=0.95
         )
-        
+
+        self.macallan_12 = models.Ingrediente.objects.create(
+            codigo='WHIS002',
+            nombre='MACALLAN 12',
+            categoria=self.categoria_whisky,
+            factor_peso=0.95
+        )
+
+        self.jack_daniels = models.Ingrediente.objects.create(
+            codigo='WHIS003',
+            nombre='JACK DANIELS',
+            categoria=self.categoria_whisky,
+            factor_peso=0.95
+        )
 
         # Recetas
         self.trago_licor_43 = models.Receta.objects.create(
@@ -252,6 +265,25 @@ class AnalyticsTests(TestCase):
             precio_unitario=450.50,
         )
 
+        self.producto_macallan_12 = models.Producto.objects.create(
+            folio="1",
+            nombre_marca='MACALLAN 12 750',
+            ingrediente=self.macallan_12,
+            peso_cristal=500,
+            capacidad=750,
+            precio_unitario=600.00,
+        )
+
+        self.producto_jack_daniels = models.Producto.objects.create(
+            folio="2",
+            nombre_marca='JACK DANIELS 750',
+            ingrediente=self.jack_daniels,
+            peso_cristal=500,
+            capacidad=750,
+            precio_unitario=600.00,
+        )
+
+
         #-----------------------------------------------------------------------
         # Botellas que llegaron en el periodo de analisis y siguen ahi
         #-----------------------------------------------------------------------
@@ -359,6 +391,36 @@ class AnalyticsTests(TestCase):
                 folio='Nn1647414423',
                 producto=self.producto_maestro_dobel,
                 url='https://siat.sat.gob.mx/app/qr/faces/pages/mobile/validadorqr.jsf?D1=4&D2=1&D3=Nn1647414423',
+                capacidad=750,
+                usuario_alta=self.usuario,
+                sucursal=self.magno_brasserie,
+                almacen=self.barra_3,
+                proveedor=self.vinos_america,
+                peso_cristal=500,
+                peso_inicial=1212,
+                peso_actual=1212,
+            )
+
+            # Creamos una botella de MACALLAN 12 que tendrá una inspección con 'peso_botella' = None
+            # CASO 2B: La botella tiene solo 1 inspeccion, ocurrió dentro del periodo analizado, pero su 'peso_botella' es None
+            self.botella_macallan_12 = models.Botella.objects.create(
+                folio='1',
+                producto=self.producto_macallan_12,
+                capacidad=750,
+                usuario_alta=self.usuario,
+                sucursal=self.magno_brasserie,
+                almacen=self.barra_2,
+                proveedor=self.vinos_america,
+                peso_cristal=500,
+                peso_inicial=1212,
+                peso_actual=1212,
+            )
+
+            # Botella para CASO 1A: La botella tiene más de una inspeccion, al menos 2 ocurrieron en el periodo analizado,
+            # al menos 1 tiene 'peso_botella' != None, pero la última = None 
+            self.botella_jack_daniels = models.Botella.objects.create(
+                folio='2',
+                producto=self.producto_jack_daniels,
                 capacidad=750,
                 usuario_alta=self.usuario,
                 sucursal=self.magno_brasserie,
@@ -513,6 +575,13 @@ class AnalyticsTests(TestCase):
                 peso_botella=1212
                 )
 
+            # Asignamos 'peso_botella' = None para la botella de MACALLAN 12
+            # CASO 2B: La botella tiene solo 1 inspeccion, ocurrió dentro del periodo analizado, pero su 'peso_botella' es None
+            self.item_inspeccion_barra2_22 = models.ItemInspeccion.objects.create(
+                inspeccion=self.inspeccion_barra2_2,
+                botella=self.botella_macallan_12,
+                peso_botella=None
+                )
 
         #------------------------------------------------------------------------
 
@@ -532,6 +601,14 @@ class AnalyticsTests(TestCase):
                 botella=self.botella_maestro_dobel,
                 peso_botella=1212
             )
+
+            self.item_inspeccion_barra3_12 = models.ItemInspeccion.objects.create(
+                inspeccion=self.inspeccion_barra3_1,
+                botella=self.botella_jack_daniels,
+                peso_botella=None
+            )
+
+
 
         # Creamos una Inspeccion posterior para la BARRA 3
         with freeze_time("2019-06-03"):
@@ -555,6 +632,12 @@ class AnalyticsTests(TestCase):
                 botella=self.botella_jw_black_4,
                 peso_botella=500
                 )
+
+            self.item_inspeccion_barra3_23 = models.ItemInspeccion.objects.create(
+                inspeccion=self.inspeccion_barra3_2,
+                botella=self.botella_jack_daniels,
+                peso_botella=1212
+            )
 
 
         """
@@ -680,44 +763,128 @@ class AnalyticsTests(TestCase):
             #print('::: NUMERO DE INSPECCIONES X BOTELLA :::')
             #print(botellas_periodo.values('folio', 'producto__ingrediente__nombre', 'num_inspecciones'))
 
-            # Subquery: Selección de 'peso_botella' de la última inspeccion
-            sq_peso_ultima_inspeccion = Subquery(models.ItemInspeccion.objects
-                                            .filter(botella=OuterRef('pk'))
-                                            .order_by('-timestamp_inspeccion')
+            """
+            --------------------------------------------------------
+            SUBQUERIES UTILES
+            --------------------------------------------------------
+            """
+
+            # Subquery: Selección de 'peso_botella' de la primera inspeccion del periodo analizado
+            sq_peso_primera_inspeccion = Subquery(models.ItemInspeccion.objects
+                                            .filter(botella=OuterRef('pk'), timestamp_inspeccion__gte=fecha_inicial, timestamp_inspeccion__lte=fecha_final)
+                                            .order_by('timestamp_inspeccion')
+                                            #.exclude(peso_botella=None)
                                             .values('peso_botella')[:1]
             )
-
+            # Subquery: Igual que la anterior, pero esta excluye las inspecciones con 'peso_botella' = None
             sq_peso_inspeccion_inicial = Subquery(models.ItemInspeccion.objects
                                             .filter(botella=OuterRef('pk'), timestamp_inspeccion__gte=fecha_inicial, timestamp_inspeccion__lte=fecha_final)
                                             .order_by('timestamp_inspeccion')
+                                            .exclude(peso_botella=None)
                                             .values('peso_botella')[:1]
+            )
+            # Subquery: La cantidad de inspecciones cuyo 'peso_botella' está OK (es decir, distinto a None)
+            sq_peso_botella_ok = Subquery(models.ItemInspeccion.objects
+                            .filter(botella=OuterRef('pk'), timestamp_inspeccion__gte=fecha_inicial, timestamp_inspeccion__lte=fecha_final)
+                            .exclude(peso_botella=None)
+                            .values('botella__pk')
+                            .annotate(inspeccion_peso_ok=Count('id'))
+                            .values('inspeccion_peso_ok')
+            )
+            # Subquery: Cantidad de inspecciones por botella que caen dentro del periodo de análisis
+            sq_inspeccion_inside = Subquery(models.ItemInspeccion.objects
+                                        .filter(botella=OuterRef('pk'), timestamp_inspeccion__gte=fecha_inicial, timestamp_inspeccion__lte=fecha_final)
+                                        #.exclude(peso_botella=None)
+                                        .values('botella__pk')
+                                        .annotate(inspeccion_count_inside=Count('id'))
+                                        .values('inspeccion_count_inside')
             )
             #----------------------------------------------------------------------
 
             #----------------------------------------------------------------------
             # Agregamos el 'peso_inspeccion_inicial'
-            botellas_peso_inspeccion_inicial = botellas_periodo.annotate(
+            # botellas_peso_inspeccion_inicial = botellas_periodo.annotate(
+            #     peso_inspeccion_inicial=Case(
+            #         # CASO 1: La botella tiene más de 1 inspeccion
+            #         When(Q(num_inspecciones__gt=1), then=sq_peso_inspeccion_inicial)
+            #         # CASO 2: La botella tiene solo 1 inspeccion
+            #         When(Q(num_inspecciones=1), then=F('peso_inicial')),
+            #         # CASO 2: La botella no tiene inspecciones
+            #         When(Q(num_inspecciones=0), then=F('peso_inicial'))
+            #     )
+            # )
+
+            #----------------------------------------------------------------------
+            # Agregamos 'inspecciones_ok_count': El numero de inspecciones que que son parte del periodo de análisis
+            botellas_inspecciones_ok = botellas_periodo.annotate(inspecciones_ok_count=ExpressionWrapper(sq_inspeccion_inside, output_field=IntegerField()))
+
+            print('::: BOTELLAS - INSPECCIONES OK COUNT :::')
+            print(botellas_inspecciones_ok.values('folio', 'producto__ingrediente__nombre', 'inspecciones_ok_count'))
+
+            #----------------------------------------------------------------------
+            # Agregamos 'inspecciones_peso_ok_count': El numero de inspecciones con 'peso_botella' != None
+            botellas_inspecciones_peso_ok = botellas_inspecciones_ok.annotate(inspecciones_peso_ok_count=ExpressionWrapper(sq_peso_botella_ok, output_field=IntegerField()))
+
+            print('::: BOTELLAS - PESO OK COUNT :::')
+            print(botellas_inspecciones_peso_ok.values('folio', 'producto__ingrediente__nombre', 'inspecciones_peso_ok_count'))
+
+            #----------------------------------------------------------------------
+            # Agregamos el peso de la última inspección para más adelante checar si es None
+            botellas_peso_primera_inspeccion = botellas_inspecciones_peso_ok.annotate(peso_primera_inspeccion=ExpressionWrapper(sq_peso_primera_inspeccion, output_field=IntegerField()))
+
+            print('::: BOTELLAS - PESO PRIMERA INSPECCION :::')
+            print(botellas_peso_primera_inspeccion.values('folio', 'producto__ingrediente__nombre', 'peso_primera_inspeccion'))
+
+
+
+            #----------------------------------------------------------------------
+            # Agregamos el 'peso_inspeccion_inicial'
+            botellas_peso_inspeccion_inicial = botellas_peso_primera_inspeccion.annotate(
                 peso_inspeccion_inicial=Case(
-                    # CASO 1: La botella tiene más de 1 inspeccion
-                    When(Q(num_inspecciones__gt=1), then=sq_peso_inspeccion_inicial),
-                    # CASO 2: La botella tiene solo 1 inspeccion
-                    When(Q(num_inspecciones=1), then=F('peso_inicial')),
-                    # CASO 2: La botella no tiene inspecciones
-                    When(Q(num_inspecciones=0), then=F('peso_inicial'))
+
+                    # CASO 1: La botella tiene más de 1 inspeccion, pero ninguna ocurrió en el periodo de análisis
+                    When(Q(num_inspecciones__gt=1) & Q(inspecciones_ok_count=None), then=F('peso_actual')),
+
+                    # CASO 1A: La botella tiene más de una inspeccion, al menos 2 ocurrieron en el periodo analizado, al menos 1 tiene 'peso_botella' != None, pero la primera tiene 'peso_botella' = None
+                    When(Q(num_inspecciones__gt=1) & Q(inspecciones_ok_count__gt=1) & Q(inspecciones_peso_ok_count__gt=0) & Q(peso_primera_inspeccion=None), then=sq_peso_inspeccion_inicial),
+
+                    # CASO 1B: La botella tiene más de una inspección, al menos una ocurrió en el periodo analizado, y al menos una tiene 'peso_botella' != None
+                    When(Q(num_inspecciones__gt=1) & Q(inspecciones_ok_count__gt=0) & Q(inspecciones_peso_ok_count__gt=0), then=sq_peso_inspeccion_inicial),
+
+                    # CASO 1C: La botella tiene más de una inspección, al menos una ocurrió en el periodo analizado, pero ninguna tiene 'peso_botella' != None
+                    When(Q(num_inspecciones__gt=1) & Q(inspecciones_ok_count__gt=0) & Q(inspecciones_peso_ok_count=None), then=F('peso_actual')),
+
+                    # CASO 2: La botella tiene solo 1 inspeccion, pero esta ocurrió fuera del periodo analizado
+                    When(Q(num_inspecciones=1) & Q(inspecciones_ok_count=None), then=F('peso_actual')),
+
+                    # CASO 2A: la botella tiene solo 1 inspeccion, esta ocurrio dentro del periodo analizado y su 'peso_botella' != None
+                    When(Q(num_inspecciones=1) & Q(inspecciones_ok_count=1) & Q(inspecciones_peso_ok_count__gt=0), then=F('peso_inicial')),
+
+                    # CASO 2B: La botella tiene solo 1 inspeccion, ocurrió dentro del periodo analizado, pero su 'peso_botella' es None
+                    When(Q(num_inspecciones=1) & Q(inspecciones_ok_count=1) & Q(inspecciones_peso_ok_count=None), then=F('peso_inicial')),
+
+                    # CASO 3: La botella no tiene inspecciones
+                    When(Q(num_inspecciones=0), then=F('peso_inicial')),
                 )
             )
 
             #----------------------------------------------------------------------
             # Agregamos 'dif_peso'
-            botellas_dif_peso = botellas_peso_inspeccion_inicial.annotate(
-                dif_peso=Case(
-                    # Excluimos las botellas con 'peso_inspeccion_inicial' = None
-                    # Estas son botellas que sí tuvieron consumo, pero no dentro del periodo del reporte
-                    When(Q(peso_inspeccion_inicial=None), then=0),
-                    # Si 'peso_inspeccion_inicial' es entero, todo OK
-                    When(Q(peso_inspeccion_inicial__lte=0) | Q(peso_inspeccion_inicial__gte=0), then=F('peso_inspeccion_inicial') - F('peso_actual')),
+            # botellas_dif_peso = botellas_peso_inspeccion_inicial.annotate(
+            #     dif_peso=Case(
+            #         # Excluimos las botellas con 'peso_inspeccion_inicial' = None
+            #         # Estas son botellas que sí tuvieron consumo, pero no dentro del periodo del reporte
+            #         When(Q(peso_inspeccion_inicial=None), then=0),
+            #         # Si 'peso_inspeccion_inicial' es entero, todo OK
+            #         When(Q(peso_inspeccion_inicial__lte=0) | Q(peso_inspeccion_inicial__gte=0), then=F('peso_inspeccion_inicial') - F('peso_actual')),
 
-                )
+            #     )
+            # )
+
+            #----------------------------------------------------------------------
+            # Agregamos 'dif_peso'
+            botellas_dif_peso = botellas_peso_inspeccion_inicial.annotate(
+                dif_peso=F('peso_inspeccion_inicial') - F('peso_actual')
             )
 
             #print('::: BOTELLAS - DIF PESO :::')
@@ -817,6 +984,7 @@ class AnalyticsTests(TestCase):
 
                 # Calculamos el IVA
                 iva = subtotal * 0.16
+                iva = float(Decimal(iva).quantize(Decimal('.01'), rounding=ROUND_UP))
                 #print('::: IVA :::')
                 #print(iva)
 
