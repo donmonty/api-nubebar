@@ -55,12 +55,23 @@ def get_stock(sucursal):
     #print(productos)
     
     # Agregamos el campo 'unidades' que indique el numero de botellas por blueprint y excluimos aquellos con cero unidades
-    productos = productos.annotate(unidades=Count('botellas')).exclude(unidades=0)
+    #productos = productos.annotate(unidades=Count('botellas')).exclude(unidades=0)
+
+    sq_num_botellas_producto = Subquery(models.Botella.objects
+                                    .filter(producto=OuterRef('pk'), sucursal=sucursal)
+                                    .values('producto__pk')
+                                    .annotate(num_botellas=Count('id'))
+                                    .values('num_botellas')
+    )
+
+    productos = productos.annotate(unidades=sq_num_botellas_producto)
+    productos = productos.exclude(unidades=0)
+
     # Ordenamos los productos del queryset por nombre
-    #productos = productos.order_by('ingrediente__categoria__nombre', 'nombre_marca')
+    productos = productos.order_by('nombre_marca')
 
     #print('::: QUERYSET PRODUCTOS - COUNT BOTELLAS :::')
-    #print(productos)
+    #print(productos.values('ingrediente__nombre', 'unidades'))
 
     # Creamos una lista con todos los productos
     lista_productos = list(productos)

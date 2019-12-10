@@ -36,14 +36,17 @@ class AnalyticsTests(TestCase):
 
         # Cliente
         self.operadora_magno = models.Cliente.objects.create(nombre='MAGNO BRASSERIE')
+        self.operadora_gama = models.Cliente.objects.create(nombre='OPERADORA GAMA')
 
         # Sucursal
         self.magno_brasserie = models.Sucursal.objects.create(nombre='MAGNO-BRASSERIE', cliente=self.operadora_magno)
+        self.pecos = models.Sucursal.objects.create(nombre='CABANA DE PECOS', cliente=self.operadora_gama)
 
         # Almacenes
         self.barra_1 = models.Almacen.objects.create(nombre='BARRA 1', numero=1, sucursal=self.magno_brasserie)
         self.barra_2 = models.Almacen.objects.create(nombre='BARRA 2', numero=2, sucursal=self.magno_brasserie)
         self.barra_3 = models.Almacen.objects.create(nombre='BARRA 3', numero=3, sucursal=self.magno_brasserie)
+        self.barra_pecos = models.Almacen.objects.create(nombre='BARRA PECOS', numero=1, sucursal=self.pecos)
 
         # Usuarios
         self.usuario = get_user_model().objects.create(email='test@foodstack.mx', password='password123')
@@ -199,6 +202,21 @@ class AnalyticsTests(TestCase):
             estado='0'
         )
 
+        self.botella_maestro_dobel_02 = models.Botella.objects.create(
+            folio='2',
+            producto=self.producto_maestro_dobel,
+            capacidad=750,
+            usuario_alta=self.usuario,
+            sucursal=self.pecos,
+            almacen=self.barra_pecos,
+            proveedor=self.vinos_america,
+            peso_cristal=500,
+            peso_inicial=1212,
+            peso_actual=800,
+            precio_unitario=460.00,
+            estado='1'
+        )
+
 
     #-----------------------------------------------------------------------------
     def test_script_reporte_ok(self):
@@ -217,14 +235,14 @@ class AnalyticsTests(TestCase):
       
         # Checamos que el status del reporte sea 'success'
         self.assertEqual(reporte['status'], 'success')
-        # Checamos que el primer producto del response sea una botella de LICOR 43 750
-        self.assertEqual(reporte['data']['botellas'][0]['nombre_marca'], self.producto_licor43.nombre_marca)
-        # Checamos que el segundo producto del response sea una botella de HERRADURA BLANCO 700
-        self.assertEqual(reporte['data']['botellas'][1]['nombre_marca'], self.producto_herradura_blanco.nombre_marca)
-        # Checamos que el tercer producto del response sea una botella de JOHNIE WALKER BLACK 750
-        self.assertEqual(reporte['data']['botellas'][2]['nombre_marca'], self.producto_jw_black.nombre_marca)
+        # Checamos que el primer producto del response sea una botella de HERRADURA BLANCO 700
+        self.assertEqual(reporte['data']['botellas'][0]['nombre_marca'], self.producto_herradura_blanco.nombre_marca)
+        # Checamos que el segundo producto del response sea una botella de JOHNNIE WALKER BLACK 750
+        self.assertEqual(reporte['data']['botellas'][1]['nombre_marca'], self.producto_jw_black.nombre_marca)
+        # Checamos que el tercer producto del response sea una botella de LICOR 43 750
+        self.assertEqual(reporte['data']['botellas'][2]['nombre_marca'], self.producto_licor43.nombre_marca)
         # Checamos las unidades de LICOR 43 750 
-        self.assertEqual(reporte['data']['botellas'][0]['unidades'], models.Botella.objects.filter(producto=self.producto_licor43).count())
+        self.assertEqual(reporte['data']['botellas'][2]['unidades'], models.Botella.objects.filter(producto=self.producto_licor43).count())
 
 
     #-----------------------------------------------------------------------------
