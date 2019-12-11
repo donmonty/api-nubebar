@@ -153,7 +153,8 @@ def get_stock_detalle(producto_id, sucursal_id):
         # Agregamos el campo 'volumen_ml'
         botellas = botellas.annotate(
             volumen_ml=ExpressionWrapper(
-                (F('peso_actual') - F('peso_cristal')) * F('producto__ingrediente__factor_peso'),
+                #(F('peso_actual') - F('peso_cristal')) * F('producto__ingrediente__factor_peso'),
+                (F('peso_actual') - F('peso_cristal')) * (2 - F('producto__ingrediente__factor_peso')),
                 output_field=DecimalField()
             )   
         )

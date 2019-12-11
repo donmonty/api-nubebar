@@ -346,7 +346,7 @@ class AnalyticsTests(TestCase):
         # Checamos que el status del reporte sea 'success'
         self.assertEqual(reporte['status'], 'success')
         # Checamos que el orden de las botellas sea correcto (de menor a mayor volumen_ml)
-        botella_con_menos_liquido = models.Botella.objects.filter(producto=self.producto_licor43).order_by('peso_actual')[0]
+        botella_con_menos_liquido = models.Botella.objects.filter(producto=self.producto_licor43).exclude(estado='0').order_by('peso_actual')[0]
         self.assertEqual(reporte['data'][0]['folio'], botella_con_menos_liquido.folio)
 
 
