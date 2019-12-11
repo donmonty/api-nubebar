@@ -155,6 +155,22 @@ class AnalyticsTests(TestCase):
             precio_unitario=347.50
         )
 
+        self.botella_licor43_3 = models.Botella.objects.create(
+            folio='3',
+            producto=self.producto_licor43,
+            capacidad=750,
+            usuario_alta=self.usuario,
+            sucursal=self.magno_brasserie,
+            almacen=self.barra_1,
+            proveedor=self.vinos_america,
+            peso_cristal=500,
+            peso_nueva=1212,
+            peso_inicial=1212,
+            peso_actual=500,
+            precio_unitario=347.50,
+            estado='0'
+        )
+
         self.botella_herradura_blanco = models.Botella.objects.create(
             folio='Nn0000000001',
             producto=self.producto_herradura_blanco,
@@ -242,7 +258,7 @@ class AnalyticsTests(TestCase):
         # Checamos que el tercer producto del response sea una botella de LICOR 43 750
         self.assertEqual(reporte['data']['botellas'][2]['nombre_marca'], self.producto_licor43.nombre_marca)
         # Checamos las unidades de LICOR 43 750 
-        self.assertEqual(reporte['data']['botellas'][2]['unidades'], models.Botella.objects.filter(producto=self.producto_licor43).count())
+        self.assertEqual(reporte['data']['botellas'][2]['unidades'], models.Botella.objects.filter(producto=self.producto_licor43).exclude(estado='0').count())
 
 
     #-----------------------------------------------------------------------------

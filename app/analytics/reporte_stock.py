@@ -59,6 +59,7 @@ def get_stock(sucursal):
 
     sq_num_botellas_producto = Subquery(models.Botella.objects
                                     .filter(producto=OuterRef('pk'), sucursal=sucursal)
+                                    .exclude(Q(estado='0') | Q(estado='3'))
                                     .values('producto__pk')
                                     .annotate(num_botellas=Count('id'))
                                     .values('num_botellas')
