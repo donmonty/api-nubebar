@@ -204,93 +204,209 @@ def calcular_restock(sucursal_id):
     #----------------------------------------------------------------------
     #----------------------------------------------------------------------
     
+    # botellas_reporte = botellas_dif_volumen
+
+    # # Creamos una lista para guardar los registros por producto del reporte
+    # lista_registros = []
+
+    # # Creamos una variable para guardar el total de la compra sugerida
+    # total_acumulado = 0
+    # #print('TOTAL ACUMULADO INICIAL')
+    # #print(type(total_acumulado))
+
+    # # Iteramos por cada uno de los productos asociados a la sucursal
+    # for producto in productos_sucursal:
+
+    #     # Tomamos las botellas asociadas al producto en cuestion
+    #     botellas_producto = botellas_reporte.filter(producto=producto)
+
+    #     # Sumamos el volumen actual de las botellas
+    #     volumen_total = botellas_producto.aggregate(volumen_total=Sum('volumen_actual'))
+    #     volumen_total = float(volumen_total['volumen_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
+
+    #     # Sumamos consumo de las botellas
+    #     consumo_total = botellas_producto.aggregate(consumo_total=Sum('consumo_ml'))
+    #     consumo_total = float(consumo_total['consumo_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
+
+    #     # Sumamos las diferencias
+    #     diferencia_total = botellas_producto.aggregate(diferencia_total=Sum('dif_volumen'))
+    #     #print('::: DIFERENCIA TOTAL :::')
+    #     #print(diferencia_total)
+
+    #     diferencia_total = float(diferencia_total['diferencia_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
+
+    #     # Si la diferencia es negativa, continuamos con el siguiente producto
+    #     # Esto significa que hay suficiente stock para satisfacer el consumo
+    #     if diferencia_total <= 0:
+    #         continue
+
+    #     # Calculamos el restock por producto
+    #     unidades_restock = diferencia_total / producto.capacidad
+    #     unidades_restock = math.ceil(unidades_restock)
+
+    #     # Tomamos el precio unitario
+    #     precio_unitario = float((producto.precio_unitario).quantize(Decimal('.01'), rounding=ROUND_UP))
+
+    #     # Calculamos el subtotal
+    #     subtotal = float(Decimal(unidades_restock * precio_unitario).quantize(Decimal('.01'), rounding=ROUND_UP))
+
+    #     # Calculamos el IVA
+    #     iva = subtotal * 0.16
+    #     iva = float(Decimal(iva).quantize(Decimal('.01'), rounding=ROUND_UP))
+    #     #print('::: IVA :::')
+    #     #print(iva)
+
+    #     # Calculamos el Total
+    #     total = subtotal + iva
+    #     total = float(Decimal(total).quantize(Decimal('.01'), rounding=ROUND_UP))
+    #     #print('::: TOTAL :::')
+    #     #print(total)
+    #     #print(type(total))
+
+    #     # Sumamos al total acumulado
+    #     total_acumulado = total_acumulado + total
+    #     total_acumulado = float(Decimal(total_acumulado).quantize(Decimal('.01'), rounding=ROUND_UP))
+
+    #     # Construimos el registro del producto
+    #     registro = {
+    #         'producto': producto.nombre_marca,
+    #         'stock_ml': volumen_total,
+    #         'demanda_ml': consumo_total,
+    #         'faltante': diferencia_total,
+    #         'compra_sugerida': unidades_restock,
+    #         'precio_lista': precio_unitario,
+    #         'subtotal': subtotal,
+    #         'iva': iva,
+    #         'total': total  
+    #     }
+
+    #     lista_registros.append(registro)
+
+    #-------------------------------------------------------------
+    #-------------------------------------------------------------
+    #-------------------------------------------------------------
+
     botellas_reporte = botellas_dif_volumen
 
-    # Creamos una lista para guardar los registros por producto del reporte
-    lista_registros = []
+    # Creamos un generator para calcular los totales de las botellas para cada producto
+    def generator_restock(productos, botellas_reporte):
 
-    # Creamos una variable para guardar el total de la compra sugerida
-    total_acumulado = 0
-    #print('TOTAL ACUMULADO INICIAL')
-    #print(type(total_acumulado))
+        total_acumulado = 0
 
-    # Iteramos por cada uno de los productos asociados a la sucursal
-    for producto in productos_sucursal:
+        for producto in productos:
 
-        # Tomamos las botellas asociadas al producto en cuestion
-        botellas_producto = botellas_reporte.filter(producto=producto)
+            # Tomamos las botellas asociadas al producto en cuestion
+            botellas_producto = botellas_reporte.filter(producto=producto)
 
-        # Sumamos el volumen actual de las botellas
-        volumen_total = botellas_producto.aggregate(volumen_total=Sum('volumen_actual'))
-        volumen_total = float(volumen_total['volumen_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
+            # Sumamos el volumen actual de las botellas
+            volumen_total = botellas_producto.aggregate(volumen_total=Sum('volumen_actual'))
+            volumen_total = float(volumen_total['volumen_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
 
-        # Sumamos consumo de las botellas
-        consumo_total = botellas_producto.aggregate(consumo_total=Sum('consumo_ml'))
-        consumo_total = float(consumo_total['consumo_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
+            # Sumamos consumo de las botellas
+            consumo_total = botellas_producto.aggregate(consumo_total=Sum('consumo_ml'))
+            consumo_total = float(consumo_total['consumo_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
 
-        # Sumamos las diferencias
-        diferencia_total = botellas_producto.aggregate(diferencia_total=Sum('dif_volumen'))
-        #print('::: DIFERENCIA TOTAL :::')
-        #print(diferencia_total)
+            # Sumamos las diferencias
+            diferencia_total = botellas_producto.aggregate(diferencia_total=Sum('dif_volumen'))
+            #print('::: DIFERENCIA TOTAL :::')
+            #print(diferencia_total)
 
-        diferencia_total = float(diferencia_total['diferencia_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
+            # Si la diferencia es negativa, continuamos con el siguiente producto
+            # Esto significa que hay suficiente stock para satisfacer el consumo
+            diferencia_total = float(diferencia_total['diferencia_total'].quantize(Decimal('.01'), rounding=ROUND_UP))
 
-        # Si la diferencia es negativa, continuamos con el siguiente producto
-        # Esto significa que hay suficiente stock para satisfacer el consumo
-        if diferencia_total <= 0:
-            continue
+            if diferencia_total <= 0:
+            #if diferencia_total >= 0:
+                continue
 
-        # Calculamos el restock por producto
-        unidades_restock = diferencia_total / producto.capacidad
-        unidades_restock = math.ceil(unidades_restock)
+            # Calculamos el restock por producto
+            unidades_restock = diferencia_total / producto.capacidad
+            unidades_restock = math.ceil(unidades_restock)
 
-        # Tomamos el precio unitario
-        precio_unitario = float((producto.precio_unitario).quantize(Decimal('.01'), rounding=ROUND_UP))
+            # Tomamos el precio unitario
+            precio_unitario = float((producto.precio_unitario).quantize(Decimal('.01'), rounding=ROUND_UP))
 
-        # Calculamos el subtotal
-        subtotal = float(Decimal(unidades_restock * precio_unitario).quantize(Decimal('.01'), rounding=ROUND_UP))
+            # Calculamos el subtotal
+            subtotal = float(Decimal(unidades_restock * precio_unitario).quantize(Decimal('.01'), rounding=ROUND_UP))
 
-        # Calculamos el IVA
-        iva = subtotal * 0.16
-        iva = float(Decimal(iva).quantize(Decimal('.01'), rounding=ROUND_UP))
-        #print('::: IVA :::')
-        #print(iva)
+            # Calculamos el IVA
+            iva = subtotal * 0.16
+            iva = float(Decimal(iva).quantize(Decimal('.01'), rounding=ROUND_UP))
+            #print('::: IVA :::')
+            #print(iva)
 
-        # Calculamos el Total
-        total = subtotal + iva
-        total = float(Decimal(total).quantize(Decimal('.01'), rounding=ROUND_UP))
-        #print('::: TOTAL :::')
-        #print(total)
-        #print(type(total))
+            # Calculamos el Total
+            total = subtotal + iva
+            total = float(Decimal(total).quantize(Decimal('.01'), rounding=ROUND_UP))
+            #print('::: TOTAL :::')
+            #print(total)
+            #print(type(total))
 
-        # Sumamos al total acumulado
-        total_acumulado = total_acumulado + total
-        total_acumulado = float(Decimal(total_acumulado).quantize(Decimal('.01'), rounding=ROUND_UP))
+            # Sumamos al total acumulado
+            #total_acumulado = total_acumulado + total
+            #total_acumulado = float(Decimal(total_acumulado).quantize(Decimal('.01'), rounding=ROUND_UP))
 
-        # Construimos el registro del producto
-        registro = {
-            'producto': producto.nombre_marca,
-            'stock_ml': volumen_total,
-            'demanda_ml': consumo_total,
-            'faltante': diferencia_total,
-            'compra_sugerida': unidades_restock,
-            'precio_lista': precio_unitario,
-            'subtotal': subtotal,
-            'iva': iva,
-            'total': total  
-        }
+            # Construimos el registro del producto
+            registro = {
+                'producto': producto.nombre_marca,
+                'stock_ml': volumen_total,
+                'demanda_ml': consumo_total,
+                'faltante': diferencia_total,
+                'compra_sugerida': unidades_restock,
+                'precio_lista': precio_unitario,
+                'subtotal': subtotal,
+                'iva': iva,
+                'total': total  
+            }
 
-        lista_registros.append(registro)
+            #lista_registros.append(registro)
+            yield registro
+
+    # Guardamos el generator en una variable
+    restock_producto = generator_restock(productos_sucursal, botellas_reporte)
+
+    # Creamos otro generator para iterar por el primer generator
+    lista_restock = (registro for registro in restock_producto)
+
+    # Convertimos los resultados del nuevo generator en una lista
+    lista_restock = list(lista_restock)
+    #lista_restock = list(lista_restock['registro'])
+    #total_acumulado = lista_restock['total_acumulado']
+
+    # Orenamos la lista de restock por 'compra_sugerida' de mayor a menor
+    lista_restock = sorted(lista_restock, key=lambda x: x['compra_sugerida'], reverse=True)
+
+    #print('::: LISTA RESTOCK :::')
+    #print(lista_restock)
 
     # Si no hubo comsumo de productos notificamos al cliente
-    if len(lista_registros) == 0:
+    if len(lista_restock) == 0:
         response = {
             'status': 'error',
             'message': 'No se consumió ningún producto en los últimos 7 días.'
         }
         return response
-    #----------------------------------------------------------------------
-        
+
+    # Creamos una funcion para iterar por el output del generator y calcular el 'total_acumulado'
+    def calcular_costo_total(lista_restock):
+
+        total_acumulado = 0
+
+        for item in lista_restock:
+
+            total = item['total']
+            total_acumulado = total + total_acumulado
+
+        total_acumulado = float(Decimal(total_acumulado).quantize(Decimal('.01'), rounding=ROUND_UP))
+
+        return total_acumulado
+
+    # Ejecutamos la función
+    costo_total = calcular_costo_total(lista_restock)
+
+    #print('::: COSTO TOTAL :::')
+    #print(costo_total)
+
     # Tomamos la fecha para el reporte
     fecha_reporte = datetime.date.today()
     fecha_reporte = fecha_reporte.strftime("%d/%m/%Y")
@@ -298,11 +414,14 @@ def calcular_restock(sucursal_id):
     # Construimos el reporte
     reporte = {
         'status': 'success',
+        #'sucursal': sucursal.nombre,
         'sucursal': sucursal.nombre,
         'fecha': fecha_reporte,
-        'costo_total': total_acumulado,
-        'data': lista_registros
+        'costo_total': costo_total,
+        'data': lista_restock
     }
 
     return reporte
+
+
 

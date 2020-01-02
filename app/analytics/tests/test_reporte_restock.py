@@ -1028,8 +1028,8 @@ class AnalyticsTests(TestCase):
                 'data': lista_registros
             }
 
-            print('::: REPORTE :::')
-            print(reporte)
+            #print('::: REPORTE :::')
+            #print(reporte)
 
         
         self.assertEqual(1, 1)
@@ -1074,20 +1074,20 @@ class AnalyticsTests(TestCase):
         self.assertEqual(len(reporte['data']), 2)
 
         # Checamos el reporte para HERRADURA BLANCO 700
-        self.assertEqual(reporte['data'][0]['producto'], self.producto_herradura_blanco.nombre_marca)
-        self.assertAlmostEqual(reporte['data'][0]['stock_ml'], 0.0)
-        self.assertAlmostEqual(reporte['data'][0]['demanda_ml'], 698.25)
-        self.assertAlmostEqual(reporte['data'][0]['faltante'], 698.25)
-        self.assertEqual(reporte['data'][0]['compra_sugerida'], 1)
-        self.assertAlmostEqual(reporte['data'][0]['total'], 343.94)
+        self.assertEqual(reporte['data'][1]['producto'], self.producto_herradura_blanco.nombre_marca)
+        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 0.0)
+        self.assertAlmostEqual(reporte['data'][1]['demanda_ml'], 698.25)
+        self.assertAlmostEqual(reporte['data'][1]['faltante'], 698.25)
+        self.assertEqual(reporte['data'][1]['compra_sugerida'], 1)
+        self.assertAlmostEqual(reporte['data'][1]['total'], 343.94)
 
         # Checamos el reporte para JW BLACK 750
-        self.assertEqual(reporte['data'][1]['producto'], self.producto_jw_black.nombre_marca)
-        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 747.6)
-        self.assertAlmostEqual(reporte['data'][1]['demanda_ml'], 2242.8)
-        self.assertAlmostEqual(reporte['data'][1]['faltante'], 1495.2)
-        self.assertEqual(reporte['data'][1]['compra_sugerida'], 2)
-        self.assertAlmostEqual(reporte['data'][1]['total'], 1300.37)
+        self.assertEqual(reporte['data'][0]['producto'], self.producto_jw_black.nombre_marca)
+        self.assertAlmostEqual(reporte['data'][0]['stock_ml'], 747.6)
+        self.assertAlmostEqual(reporte['data'][0]['demanda_ml'], 2242.8)
+        self.assertAlmostEqual(reporte['data'][0]['faltante'], 1495.2)
+        self.assertEqual(reporte['data'][0]['compra_sugerida'], 2)
+        self.assertAlmostEqual(reporte['data'][0]['total'], 1300.37)
 
 
     #-----------------------------------------------------------------------------
@@ -1437,6 +1437,9 @@ class AnalyticsTests(TestCase):
             #lista_restock = list(lista_restock['registro'])
             #total_acumulado = lista_restock['total_acumulado']
 
+            # Orenamos la lista de restock por 'compra_sugerida' de mayor a menor
+            lista_restock = sorted(lista_restock, key=lambda x: x['compra_sugerida'], reverse=True)
+
             #print('::: LISTA RESTOCK :::')
             #print(lista_restock)
 
@@ -1482,20 +1485,20 @@ class AnalyticsTests(TestCase):
         self.assertAlmostEqual(reporte['costo_total'], 1644.31)
 
         # Checamos el reporte para HERRADURA BLANCO 700
-        self.assertEqual(reporte['data'][0]['producto'], self.producto_herradura_blanco.nombre_marca)
-        self.assertAlmostEqual(reporte['data'][0]['stock_ml'], 0.0)
-        self.assertAlmostEqual(reporte['data'][0]['demanda_ml'], 698.25)
-        self.assertAlmostEqual(reporte['data'][0]['faltante'], 698.25)
-        self.assertEqual(reporte['data'][0]['compra_sugerida'], 1)
-        self.assertAlmostEqual(reporte['data'][0]['total'], 343.94)
+        self.assertEqual(reporte['data'][1]['producto'], self.producto_herradura_blanco.nombre_marca)
+        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 0.0)
+        self.assertAlmostEqual(reporte['data'][1]['demanda_ml'], 698.25)
+        self.assertAlmostEqual(reporte['data'][1]['faltante'], 698.25)
+        self.assertEqual(reporte['data'][1]['compra_sugerida'], 1)
+        self.assertAlmostEqual(reporte['data'][1]['total'], 343.94)
 
         # Checamos el reporte para JW BLACK 750
-        self.assertEqual(reporte['data'][1]['producto'], self.producto_jw_black.nombre_marca)
-        self.assertAlmostEqual(reporte['data'][1]['stock_ml'], 747.6)
-        self.assertAlmostEqual(reporte['data'][1]['demanda_ml'], 2242.8)
-        self.assertAlmostEqual(reporte['data'][1]['faltante'], 1495.2)
-        self.assertEqual(reporte['data'][1]['compra_sugerida'], 2)
-        self.assertAlmostEqual(reporte['data'][1]['total'], 1300.37)
+        self.assertEqual(reporte['data'][0]['producto'], self.producto_jw_black.nombre_marca)
+        self.assertAlmostEqual(reporte['data'][0]['stock_ml'], 747.6)
+        self.assertAlmostEqual(reporte['data'][0]['demanda_ml'], 2242.8)
+        self.assertAlmostEqual(reporte['data'][0]['faltante'], 1495.2)
+        self.assertEqual(reporte['data'][0]['compra_sugerida'], 2)
+        self.assertAlmostEqual(reporte['data'][0]['total'], 1300.37)
 
 
         
