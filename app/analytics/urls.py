@@ -17,4 +17,5 @@ urlpatterns = [
     path('get-reporte-productos-sin-registro/sucursal/<int:sucursal_id>', views.get_reporte_productos_sin_registro, name='get-reporte-productos-sin-registro'),
     path('get-detalle-sin-registro/codigo/<str:codigo_pos>/sucursal/<int:sucursal_id>', views.get_detalle_sin_registro, name='get-detalle-sin-registro'),
     path('get-reporte-restock/sucursal/<int:sucursal_id>', views.get_reporte_restock, name='get-reporte-restock'),
+    path('get-detalle-botellas-merma/merma/<int:merma_id>/', views.get_botellas_merma, name='get-detalle-botellas-merma'),
 ]

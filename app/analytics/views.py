@@ -292,3 +292,28 @@ def get_reporte_restock(request, sucursal_id):
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para el Detalle de Botellas de Merma
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_botellas_merma(request, merma_id):
+
+    if request.method == 'GET':
+
+        # Ejecutamos el reporte
+        reporte = rm.get_botellas_merma(merma_id)
+
+        return Response(reporte)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+

@@ -12,7 +12,7 @@ from core import models
 
 import datetime
 from django.utils.timezone import make_aware
-from decimal import Decimal
+from decimal import Decimal, ROUND_UP
 import json
 from freezegun import freeze_time
 from analytics import reporte_mermas
@@ -1573,3 +1573,291 @@ class AnalyticsTests(TestCase):
         # Checamos el status del response
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+
+    #----------------------------------------------------------------------------------
+    def test_script_detalle_botellas_ok(self):
+        """
+        ----------------------------------------------------------------------
+        Testear que el script que muestra el detalle de botellas de una merma
+        ----------------------------------------------------------------------
+        """
+        # Creamos una barra nueva para el test
+        barra_4 = models.Almacen.objects.create(nombre='BARRA 4', numero=4, sucursal=self.magno_brasserie)
+
+        # Creamos una caja nueva para el test
+        caja_4 = models.Caja.objects.create(numero=4, nombre='CAJA 4', almacen=barra_4)
+
+        # Creamos botellas nuevas para el test
+        with freeze_time("2019-05-01"):
+            # Manejamos el tema del naive datetime
+            naive_datetime = datetime.datetime.now()
+            aware_datetime = make_aware(naive_datetime)
+
+            botella_licor_43_3 = models.Botella.objects.create(
+                folio='1',
+                producto=self.producto_licor43,
+                usuario_alta=self.usuario,
+                sucursal=self.magno_brasserie,
+                almacen=barra_4,
+                capacidad=750,
+                peso_cristal=500,
+                peso_inicial=1288,
+                peso_actual=1162, # Le restamos 63gr x 2 para simular que se sirvieron 2 tragos de 60ml
+                estado='1'
+            )
+
+            botella_licor_43_4 = models.Botella.objects.create(
+                folio='2',
+                producto=self.producto_licor43,
+                usuario_alta=self.usuario,
+                sucursal=self.magno_brasserie,
+                almacen=barra_4,
+                capacidad=750,
+                peso_cristal=500,
+                peso_inicial=1288,
+                peso_actual=1288,
+                estado='2'
+            )
+
+            botella_licor_43_5 = models.Botella.objects.create(
+                folio='3',
+                producto=self.producto_licor43,
+                usuario_alta=self.usuario,
+                sucursal=self.magno_brasserie,
+                almacen=barra_4,
+                capacidad=750,
+                peso_cristal=500,
+                peso_inicial=1288,
+                peso_actual=500, 
+                estado='0'
+            )
+
+            botella_licor_43_6 = models.Botella.objects.create(
+                folio='4',
+                producto=self.producto_licor43,
+                usuario_alta=self.usuario,
+                sucursal=self.magno_brasserie,
+                almacen=barra_4,
+                capacidad=750,
+                peso_cristal=500,
+                peso_inicial=1288,
+                peso_actual=1225, 
+                estado='1'
+            )
+
+
+        # Creamos una Inspeccion anterior para la BARRA 4
+        with freeze_time("2019-06-03"):
+            
+            inspeccion_barra4_1 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #3
+            item_inspeccion_11 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_1,
+                botella=botella_licor_43_3,
+                peso_botella=1288
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #4
+            item_inspeccion_12 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_1,
+                botella=botella_licor_43_4,
+                peso_botella=1288
+            )
+
+            # # Creamos un ItemInspeccion para la botella de Licor 43 #5
+            # item_inspeccion_12 = models.ItemInspeccion.objects.create(
+            #     inspeccion=inspeccion_barra4_1,
+            #     botella=botella_licor_43_5,
+            #     peso_botella=910,
+            #     #peso_botella=None
+            # )
+
+        # Creamos una SEGUNDA Inspeccion para la BARRA 4
+        with freeze_time("2019-06-04"):
+            
+            inspeccion_barra4_2 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #3
+            item_inspeccion_21 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_2,
+                botella=botella_licor_43_3,
+                #peso_botella=1162
+                peso_botella=1225
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #4
+            item_inspeccion_22 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_2,
+                botella=botella_licor_43_4,
+                peso_botella=1288
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #5
+            item_inspeccion_23 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_2,
+                botella=botella_licor_43_5,
+                peso_botella=910,
+                #peso_botella=None
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #6
+            item_inspeccion_24 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_2,
+                botella=botella_licor_43_6,
+                peso_botella=None
+            )
+
+            # # Creamos un ItemInspeccion para la botella de Licor 43 #5
+            # item_inspeccion_23 = models.ItemInspeccion.objects.create(
+            #     inspeccion=inspeccion_barra4_2,
+            #     botella=botella_licor_43_5,
+            #     peso_botella=None
+            # )
+
+        # Creamos una TERCERA inspección para la BARRA 4
+        with freeze_time("2019-06-05"):
+            
+            inspeccion_barra4_3 = models.Inspeccion.objects.create(
+                almacen=barra_4,
+                sucursal=self.magno_brasserie,
+                usuario_alta=self.usuario,
+                usuario_cierre=self.usuario,
+                estado='1' # CERRADA
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #3
+            item_inspeccion_31 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_3,
+                botella=botella_licor_43_3,
+                peso_botella=1162
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #4
+            item_inspeccion_32 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_3,
+                botella=botella_licor_43_4,
+                peso_botella=1288
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #5
+            item_inspeccion_33 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_3,
+                botella=botella_licor_43_5,
+                peso_botella=None
+            )
+
+            # Creamos un ItemInspeccion para la botella de Licor 43 #6
+            item_inspeccion_34 = models.ItemInspeccion.objects.create(
+                inspeccion=inspeccion_barra4_3,
+                botella=botella_licor_43_6,
+                peso_botella=1225
+            )
+
+        #--------------------------------------------------------------------
+
+        # Creamos un reporte de mermas para la TERCERA inspeccion
+        reporte_mermas_barra4 = models.ReporteMermas.objects.create(
+            inspeccion=inspeccion_barra4_3,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 4),
+            fecha_final=inspeccion_barra4_3.fecha_alta
+        )
+
+        # Creamos una MermaIngrediente para el reporte
+        merma_ingrediente_1 = models.MermaIngrediente.objects.create(
+            ingrediente=self.licor_43,
+            reporte=reporte_mermas_barra4,
+            almacen=barra_4,
+            fecha_inicial=datetime.date(2019, 6, 4),
+            fecha_final=inspeccion_barra4_3.fecha_alta,
+            consumo_ventas=60,
+            consumo_real=60
+        )
+
+        #-----------------------------------------------------------
+
+        # Ejecutamos el script
+        detalle_botellas = reporte_mermas.get_botellas_merma(merma_ingrediente_1.id)
+
+        print('::: DETALLE BOTELLAS :::')
+        print(detalle_botellas)
+
+        #-----------------------------------------------------------
+
+        self.assertEqual(1, 1)
+
+        # Checamos el status del reporte
+        self.assertEqual(detalle_botellas['status'], 'success')
+
+        # Checamos la diferencia total de ml
+        self.assertEqual(detalle_botellas['data']['diferencia_total_ml'], 509)
+
+        # Checamos la diferencia total en tragos
+        self.assertAlmostEqual(detalle_botellas['data']['diferencia_total_tragos'], 8.49)
+
+        # Checks botella LICOR 43 #6
+        peso_actual_folio_4 = item_inspeccion_34.peso_botella
+        peso_anterior_folio_4 = botella_licor_43_6.peso_inicial
+        volumen_anterior_folio_4 = (peso_anterior_folio_4 - botella_licor_43_6.peso_cristal) * (2 - self.licor_43.factor_peso)
+        volumen_actual_folio_4 = (peso_actual_folio_4 - botella_licor_43_6.peso_cristal) * (2 - self.licor_43.factor_peso)
+        #diferencia_ml_folio_4 = round(float((volumen_anterior_folio_4 - volumen_actual_folio_4).quantize(Decimal('.01'), rounding=ROUND_UP)))
+        diferencia_ml_folio_4 = round(volumen_anterior_folio_4 - volumen_actual_folio_4)
+
+        self.assertEqual(diferencia_ml_folio_4, detalle_botellas['data']['botellas'][1]['diferencia_ml'])
+
+        # Checks botella LICOR 43 #5
+        peso_actual_folio_3 = botella_licor_43_5.peso_actual
+        peso_anterior_folio_3 = item_inspeccion_23.peso_botella
+        volumen_anterior_folio_3 = (peso_anterior_folio_3 - botella_licor_43_5.peso_cristal) * (2 - self.licor_43.factor_peso)
+        volumen_actual_folio_3 = (peso_actual_folio_3 - botella_licor_43_5.peso_cristal) * (2 - self.licor_43.factor_peso)
+        diferencia_ml_folio_3 = round(volumen_anterior_folio_3 - volumen_actual_folio_3)
+
+        self.assertEqual(diferencia_ml_folio_3, detalle_botellas['data']['botellas'][2]['diferencia_ml'])
+
+        # Checks botella LICOR 43 #3
+        peso_actual_folio_1 = botella_licor_43_3.peso_actual
+        peso_anterior_folio_1 = item_inspeccion_21.peso_botella
+        volumen_anterior_folio_1 = (peso_anterior_folio_1 - botella_licor_43_3.peso_cristal) * (2 - self.licor_43.factor_peso)
+        volumen_actual_folio_1 = (peso_actual_folio_1 - botella_licor_43_3.peso_cristal) * (2 - self.licor_43.factor_peso)
+        diferencia_ml_folio_1 = round(volumen_anterior_folio_1 - volumen_actual_folio_1)
+
+        self.assertEqual(diferencia_ml_folio_1, detalle_botellas['data']['botellas'][0]['diferencia_ml'])
+
+        # print('::: DIFERENCIA ML TEST :::')
+        # print(diferencia_ml_folio_1)
+        # print(type(diferencia_ml_folio_1))  
+
+
+    #----------------------------------------------------------------------------------
+    @patch('analytics.reporte_mermas.get_botellas_merma')
+    def test_get_detalle_botellas_merma_ok(self, mock_ventas):
+        """
+        ----------------------------------------------------------------------
+        Test para el endpoint 'get_detalle_botellas_mermas'
+        ----------------------------------------------------------------------
+        """
+        # Simulamos la respuesta del metodo 'get_botellas_merma' del modulo reporte_mermas.py
+        mock_ventas.return_value = {'status': 'success'}
+
+        # Construimos el request
+        url = reverse('analytics:get-detalle-botellas-merma', args=[1])
+        response = self.client.get(url)
+
+        print('::: RESPONSE DATA :::')
+        print(response.data)
+
+
+        self.assertEqual(response.data['status'], 'success')
