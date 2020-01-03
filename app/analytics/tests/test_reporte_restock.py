@@ -1274,6 +1274,9 @@ class AnalyticsTests(TestCase):
                 )
             )
 
+            #print('::: BOTELLAS - PESO INSPECCION INICIAL :::')
+            #print(botellas_peso_inspeccion_inicial.values('folio', 'producto__ingrediente__nombre', 'peso_inspeccion_inicial', 'peso_actual', 'num_inspecciones'))
+
             #----------------------------------------------------------------------
             # Agregamos 'dif_peso'
             # botellas_dif_peso = botellas_peso_inspeccion_inicial.annotate(
@@ -1355,9 +1358,21 @@ class AnalyticsTests(TestCase):
             # Creamos un generator para calcular los totales de las botellas para cada producto
             def generator_restock(productos, botellas_reporte):
 
+                # Ordenamos los Productos por 'nombre_marca'
+                productos = productos.order_by('nombre_marca')
+                lista_de_productos = list(productos.values('nombre_marca'))
+
+                print('::: PRODUCTOS :::')
+                print(lista_de_productos)
+
                 total_acumulado = 0
 
+                print('::: PRODUCTOS SUCURSAL :::')
+
                 for producto in productos:
+
+                    
+                    print(producto.nombre_marca)
 
                     # Tomamos las botellas asociadas al producto en cuestion
                     botellas_producto = botellas_reporte.filter(producto=producto)

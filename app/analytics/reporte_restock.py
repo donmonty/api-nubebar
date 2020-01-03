@@ -293,7 +293,19 @@ def calcular_restock(sucursal_id):
 
         total_acumulado = 0
 
+        # Ordenamos los Productos por 'nombre_marca'
+        productos = productos.order_by('nombre_marca')
+        lista_de_productos = list(productos.values('nombre_marca'))
+
+        print('::: PRODUCTOS :::')
+        print(lista_de_productos)
+
+        print('::: PRODUCTOS SUCURSAL :::')
+
         for producto in productos:
+
+            
+            print(producto.nombre_marca)
 
             # Tomamos las botellas asociadas al producto en cuestion
             botellas_producto = botellas_reporte.filter(producto=producto)
