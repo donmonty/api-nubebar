@@ -94,22 +94,22 @@ def calcular_restock(sucursal_id):
     # Agregamos 'inspecciones_ok_count': El numero de inspecciones que que son parte del periodo de análisis
     botellas_inspecciones_ok = botellas_periodo.annotate(inspecciones_ok_count=ExpressionWrapper(sq_inspeccion_inside, output_field=IntegerField()))
 
-    print('::: BOTELLAS - INSPECCIONES OK COUNT :::')
-    print(botellas_inspecciones_ok.values('folio', 'producto__ingrediente__nombre', 'inspecciones_ok_count'))
+    #print('::: BOTELLAS - INSPECCIONES OK COUNT :::')
+    #print(botellas_inspecciones_ok.values('folio', 'producto__ingrediente__nombre', 'inspecciones_ok_count'))
 
     #----------------------------------------------------------------------
     # Agregamos 'inspecciones_peso_ok_count': El numero de inspecciones con 'peso_botella' != None
     botellas_inspecciones_peso_ok = botellas_inspecciones_ok.annotate(inspecciones_peso_ok_count=ExpressionWrapper(sq_peso_botella_ok, output_field=IntegerField()))
 
-    print('::: BOTELLAS - PESO OK COUNT :::')
-    print(botellas_inspecciones_peso_ok.values('folio', 'producto__ingrediente__nombre', 'inspecciones_peso_ok_count'))
+    #print('::: BOTELLAS - PESO OK COUNT :::')
+    #print(botellas_inspecciones_peso_ok.values('folio', 'producto__ingrediente__nombre', 'inspecciones_peso_ok_count'))
 
     #----------------------------------------------------------------------
     # Agregamos el peso de la última inspección para más adelante checar si es None
     botellas_peso_primera_inspeccion = botellas_inspecciones_peso_ok.annotate(peso_primera_inspeccion=ExpressionWrapper(sq_peso_primera_inspeccion, output_field=IntegerField()))
 
-    print('::: BOTELLAS - PESO PRIMERA INSPECCION :::')
-    print(botellas_peso_primera_inspeccion.values('folio', 'producto__ingrediente__nombre', 'peso_primera_inspeccion'))
+    #print('::: BOTELLAS - PESO PRIMERA INSPECCION :::')
+    #print(botellas_peso_primera_inspeccion.values('folio', 'producto__ingrediente__nombre', 'peso_primera_inspeccion'))
 
 
 
@@ -130,6 +130,9 @@ def calcular_restock(sucursal_id):
             # CASO 1C: La botella tiene más de una inspección, al menos una ocurrió en el periodo analizado, pero ninguna tiene 'peso_botella' != None
             When(Q(num_inspecciones__gt=1) & Q(inspecciones_ok_count__gt=0) & Q(inspecciones_peso_ok_count=None), then=F('peso_actual')),
 
+            # CASO 1D: La botella tiene más de 1 inspección, al menos una ocurrió en el periodo analizado
+            When(Q(num_inspecciones__gt=1) & Q(inspecciones_ok_count__gt=0), then=sq_peso_inspeccion_inicial),
+
             # CASO 2: La botella tiene solo 1 inspeccion, pero esta ocurrió fuera del periodo analizado
             When(Q(num_inspecciones=1) & Q(inspecciones_ok_count=None), then=F('peso_actual')),
 
@@ -138,6 +141,9 @@ def calcular_restock(sucursal_id):
 
             # CASO 2B: La botella tiene solo 1 inspeccion, ocurrió dentro del periodo analizado, pero su 'peso_botella' es None
             When(Q(num_inspecciones=1) & Q(inspecciones_ok_count=1) & Q(inspecciones_peso_ok_count=None), then=F('peso_inicial')),
+
+            # CASO 2C: la botella tiene solo 1 inspeccion, esta ocurrio dentro del periodo analizado 
+            When(Q(num_inspecciones=1) & Q(inspecciones_ok_count=1), then=F('peso_inicial')),
 
             # CASO 3: La botella no tiene inspecciones
             When(Q(num_inspecciones=0), then=F('peso_inicial')),
@@ -297,10 +303,11 @@ def calcular_restock(sucursal_id):
         productos = productos.order_by('nombre_marca')
         lista_de_productos = list(productos.values('nombre_marca'))
 
-        print('::: PRODUCTOS :::')
-        print(lista_de_productos)
+        #print('::: PRODUCTOS :::')
+        #print(lista_de_productos)
 
-        print('::: PRODUCTOS SUCURSAL :::')
+        #print('::: PRODUCTOS SUCURSAL :::')
+        print('::: BOTELLAS PRODUCTO :::')
 
         for producto in productos:
 
@@ -309,6 +316,7 @@ def calcular_restock(sucursal_id):
 
             # Tomamos las botellas asociadas al producto en cuestion
             botellas_producto = botellas_reporte.filter(producto=producto)
+            print(list(botellas_producto.values('folio')))
 
             # Sumamos el volumen actual de las botellas
             volumen_total = botellas_producto.aggregate(volumen_total=Sum('volumen_actual'))
