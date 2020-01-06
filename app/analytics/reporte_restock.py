@@ -312,11 +312,15 @@ def calcular_restock(sucursal_id):
         for producto in productos:
 
             
-            print(producto.nombre_marca)
+            #print(producto.nombre_marca)
+
+            # Si NO hay botellas asociadas a ese producto, continuamos con el siguiente producto
+            if not botellas_reporte.filter(producto=producto).exists():
+                continue
 
             # Tomamos las botellas asociadas al producto en cuestion
             botellas_producto = botellas_reporte.filter(producto=producto)
-            print(list(botellas_producto.values('folio')))
+            #print(list(botellas_producto.values('folio')))
 
             # Sumamos el volumen actual de las botellas
             volumen_total = botellas_producto.aggregate(volumen_total=Sum('volumen_actual'))
