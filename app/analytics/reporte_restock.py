@@ -28,7 +28,8 @@ def calcular_restock(sucursal_id):
     # - Las que entraron y salieron en el periodo
     # - Las que entraron en el periodo y no han salido
     
-    botellas_periodo = models.Botella.objects.filter(
+    #botellas_periodo = models.Botella.objects.filter(
+    botellas_periodo = botellas_sucursal.filter(
 
         Q(fecha_registro__lte=fecha_inicial, fecha_baja=None) |
         Q(fecha_registro__lte=fecha_inicial, fecha_baja__gte=fecha_inicial, fecha_baja__lte=fecha_final) |
