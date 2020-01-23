@@ -5,7 +5,7 @@ from django.conf import settings
 
 import datetime
 import decimal
-#from datetime import date
+
 
 
 """
@@ -389,6 +389,7 @@ class Botella(models.Model):
 	proveedor 					= models.ForeignKey(Proveedor, related_name='botellas_proveedor', blank=True, null=True, on_delete=models.SET_NULL)
 	ingrediente 				= models.CharField(max_length=255, blank=True)
 	categoria 					= models.CharField(max_length=255, blank=True)
+	
 
 	def save(self, *args, **kwargs):
 		

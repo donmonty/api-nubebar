@@ -1089,6 +1089,40 @@ class AnalyticsTests(TestCase):
         self.assertEqual(reporte['data'][0]['compra_sugerida'], 2)
         self.assertAlmostEqual(reporte['data'][0]['total'], 1300.37)
 
+    #-----------------------------------------------------------------------------
+    # def test_script_reporte_2_ok(self):
+
+    #     """
+    #     -----------------------------------------------------------------------
+    #     Testeamos que el script del reporte_ok funcione OK
+    #     -----------------------------------------------------------------------
+    #     """
+
+    #     # Ejecutamos el reporte
+    #     with freeze_time("2019-06-06"):
+    #         reporte = reporte_restock.calcular_restock_2(self.magno_brasserie.id)
+
+    #     #print('::: TEST - RESTOCK :::')
+    #     #print(reporte)
+
+    #         #botellas_multi_inspecciones = models.Botella.inspecciones.multiples_inspecciones().values('folio', 'nombre_marca', 'numero_inspecciones')
+    #         #print('::: BOTELLAS - MULIT INSPECCIONES :::')
+    #         #print(botellas_multi_inspecciones)
+
+    #         #botellas_inspecciones_periodo = botellas_multi_inspecciones.peso_tiempo.inspecciones_periodo().values('folio', 'nombre_marca', 'inspecciones_periodo')
+    #         #botellas_inspecciones_periodo = models.Botella.peso_tiempo.inspecciones_periodo().values('folio', 'nombre_marca', 'inspecciones_periodo')
+    #         #print('::: BOTELLAS - INSPECCIONES PERIODO :::')
+    #         #print(botellas_inspecciones_periodo)
+
+       
+
+    #     #inspecciones_test = self.botella_licor43_2.inspecciones_botella.all()[:1].values('peso_botella')
+    #     #print('::: INSPECCIONES BOTELLA LICOR 43-2 :::')
+    #     #print(inspecciones_test.values('peso_botella'))
+    #     #print(inspecciones_test)
+
+    #     self.assertEqual(1, 1)
+
 
     #-----------------------------------------------------------------------------
     @patch('analytics.reporte_restock.calcular_restock')
