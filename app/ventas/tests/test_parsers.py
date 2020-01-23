@@ -5,6 +5,7 @@ from ventas.parsers import parser_magno_brasserie
 from ventas.parsers import parser_gambinos_saopaulo
 from ventas.parsers import parser_pecos
 from ventas.parsers import parser_kinkin
+from ventas.parsers import parser_demo
 
 from core import models
 import os
@@ -409,3 +410,86 @@ class ParserKinkinTests(TestCase):
 
         # Comparamos el output esperado contra el real
         self.assertEqual(output_esperado, output_parser)
+
+
+class ParserDemoTests(TestCase):
+
+    maxDiff = None
+
+    def setUp(self):
+
+        # Cliente
+        self.foodstack = models.Cliente.objects.create(nombre='FOODSTACK TECHNOLOGY')
+        # Sucursal
+        self.demo = models.Sucursal.objects.create(nombre='DEMO', cliente=self.foodstack)
+        # Almacen
+        self.barra_1 = models.Almacen.objects.create(nombre='BARRA DEMO', numero=1, sucursal=self.demo)
+        # Caja
+        self.caja_1 = models.Caja.objects.create(numero=1, nombre='CAJA DEMO', almacen=self.barra_1)
+
+    
+    def test_output_ok(self):
+        """ 
+        ----------------------------------------------------------------------
+        Testear que el output del parser es correcto
+        ----------------------------------------------------------------------
+        """
+
+        # Definimos un diccionario con el output esperado del parser
+        output_esperado = [
+            {
+                'sucursal_id': self.demo.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': 'CMEZC999',
+                'nombre': 'COPA MEZCAL DEMO',
+                'unidades': 1,
+                'importe': 100
+            },
+            {
+                'sucursal_id': self.demo.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': 'CMEZC999',
+                'nombre': 'COPA MEZCAL DEMO',
+                'unidades': 1,
+                'importe': 100
+            },
+            {
+                'sucursal_id': self.demo.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': 'CMEZC999',
+                'nombre': 'COPA MEZCAL DEMO',
+                'unidades': 1,
+                'importe': 100
+            },
+            {
+                'sucursal_id': self.demo.id,
+                'caja_id': self.caja_1.id,
+                'codigo_pos': 'CMEZC999',
+                'nombre': 'COPA MEZCAL DEMO',
+                'unidades': 1,
+                'importe': 100
+            },
+        ]
+
+        # Definimos el path absoluto del reporte de ventas
+        path_reporte_ventas = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ventas_demo.csv')
+
+        # Procesamos el reporte de ventas con el parser y guardamos el output en una variable
+        output_parser = parser_demo.parser(path_reporte_ventas, self.demo)
+        #print('::: OUTPUT PARSER :::')
+        #print(output_parser)
+
+        # Convertimos el dataframe del output en un json
+        dataframe_output = output_parser['df_ventas']
+
+        # Tomamos las primeras 4 filas del dataframe
+        dataframe_output = dataframe_output.head(4)
+        #print('::: DATAFRAME OUTPUT :::')
+        #print(dataframe_output)
+
+        output_parser = dataframe_output.to_json(orient='records')
+        # Convertimos el json en un objeto de python
+        output_parser = json.loads(output_parser)
+        # Comparamos el output esperado contra el real
+        self.assertEqual(output_esperado, output_parser)
+
