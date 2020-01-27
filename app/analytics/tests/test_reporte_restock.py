@@ -18,7 +18,7 @@ from django.utils.timezone import make_aware
 from decimal import Decimal, ROUND_UP
 import json
 from freezegun import freeze_time
-from analytics import reporte_restock
+from analytics import reporte_restock, reporte_restock_02
 
 # from analytics.serializers import (
 #     ReporteMermasDetalleSerializer,
@@ -301,6 +301,7 @@ class AnalyticsTests(TestCase):
                 peso_cristal=500,
                 peso_inicial=1212,
                 peso_actual=1000,
+                precio_unitario=347.50
             )
 
             self.botella_licor43_2 = models.Botella.objects.create(
@@ -315,6 +316,7 @@ class AnalyticsTests(TestCase):
                 peso_cristal=500,
                 peso_inicial=1212,
                 peso_actual=1000,
+                precio_unitario=347.50
             )
 
             #-----------------------------------------------------------------------
@@ -333,6 +335,7 @@ class AnalyticsTests(TestCase):
                 peso_cristal=500,
                 peso_inicial=1165,
                 peso_actual=500,
+                precio_unitario=296
             )
 
             self.botella_jw_black = models.Botella.objects.create(
@@ -347,6 +350,7 @@ class AnalyticsTests(TestCase):
                 peso_cristal=500,
                 peso_inicial=1212,
                 peso_actual=1000,
+                precio_unitario=580
             )
 
         # Creamos una botella de JW Black NUEVA y que se va a consumir y dar de baja el mismo dia
@@ -363,6 +367,7 @@ class AnalyticsTests(TestCase):
             peso_inicial=1212,
             peso_actual=1212,
             estado='2',
+            precio_unitario=580
         )
 
         #-----------------------------------------------------------------------
@@ -385,6 +390,7 @@ class AnalyticsTests(TestCase):
                 peso_inicial=1212,
                 peso_actual=1212,
                 estado='2',
+                precio_unitario=580
             )
 
             self.botella_maestro_dobel = models.Botella.objects.create(
@@ -399,6 +405,7 @@ class AnalyticsTests(TestCase):
                 peso_cristal=500,
                 peso_inicial=1212,
                 peso_actual=1212,
+                precio_unitario=450
             )
 
             # Creamos una botella de MACALLAN 12 que tendrá una inspección con 'peso_botella' = None
@@ -414,6 +421,7 @@ class AnalyticsTests(TestCase):
                 peso_cristal=500,
                 peso_inicial=1212,
                 peso_actual=1212,
+                precio_unitario=790
             )
 
             # Botella para CASO 1A: La botella tiene más de una inspeccion, al menos 2 ocurrieron en el periodo analizado,
@@ -429,6 +437,7 @@ class AnalyticsTests(TestCase):
                 peso_cristal=500,
                 peso_inicial=1212,
                 peso_actual=1212,
+                precio_unitario=280
             )
 
         #-----------------------------------------------------------------------
@@ -451,6 +460,7 @@ class AnalyticsTests(TestCase):
                 peso_inicial=1212,
                 peso_actual=1212,
                 estado='2',
+                precio_unitario=580
             )
         #-----------------------------------------------------------------------
         # Botellas vacías que no son parte del análisis
@@ -470,6 +480,7 @@ class AnalyticsTests(TestCase):
                 peso_inicial=1165,
                 peso_actual=500,
                 estado='0',
+                precio_unitario=290
             )
 
         #--------------------------------------------------------------------------
@@ -1090,39 +1101,57 @@ class AnalyticsTests(TestCase):
         self.assertAlmostEqual(reporte['data'][0]['total'], 1300.37)
 
     #-----------------------------------------------------------------------------
-    # def test_script_reporte_2_ok(self):
+    def test_script_reporte_2_ok(self):
 
-    #     """
-    #     -----------------------------------------------------------------------
-    #     Testeamos que el script del reporte_ok funcione OK
-    #     -----------------------------------------------------------------------
-    #     """
+        """
+        -----------------------------------------------------------------------
+        Testeamos que el script del reporte_ok funcione OK
+        -----------------------------------------------------------------------
+        """
 
-    #     # Ejecutamos el reporte
-    #     with freeze_time("2019-06-06"):
-    #         reporte = reporte_restock.calcular_restock_2(self.magno_brasserie.id)
+        # Ejecutamos el reporte
+        with freeze_time("2019-06-06"):
+            reporte = reporte_restock_02.calcular_restock(self.magno_brasserie.id)
 
-    #     #print('::: TEST - RESTOCK :::')
-    #     #print(reporte)
+        #print('::: TEST - RESTOCK :::')
+        #print(reporte)
 
-    #         #botellas_multi_inspecciones = models.Botella.inspecciones.multiples_inspecciones().values('folio', 'nombre_marca', 'numero_inspecciones')
-    #         #print('::: BOTELLAS - MULIT INSPECCIONES :::')
-    #         #print(botellas_multi_inspecciones)
 
-    #         #botellas_inspecciones_periodo = botellas_multi_inspecciones.peso_tiempo.inspecciones_periodo().values('folio', 'nombre_marca', 'inspecciones_periodo')
-    #         #botellas_inspecciones_periodo = models.Botella.peso_tiempo.inspecciones_periodo().values('folio', 'nombre_marca', 'inspecciones_periodo')
-    #         #print('::: BOTELLAS - INSPECCIONES PERIODO :::')
-    #         #print(botellas_inspecciones_periodo)
+        self.assertEqual(reporte['status'], 'success')
+        self.assertAlmostEqual(reporte['costo_total'], 1016.16)
 
-       
+        self.assertEqual(reporte['data'][0]['Producto'], 'HERRADURA BLANCO 700')
+        self.assertAlmostEqual(reporte['data'][0]['Compra'], 1.0)
 
-    #     #inspecciones_test = self.botella_licor43_2.inspecciones_botella.all()[:1].values('peso_botella')
-    #     #print('::: INSPECCIONES BOTELLA LICOR 43-2 :::')
-    #     #print(inspecciones_test.values('peso_botella'))
-    #     #print(inspecciones_test)
+        self.assertEqual(reporte['data'][1]['Producto'], 'JW BLACK 750')
+        self.assertAlmostEqual(reporte['data'][1]['Compra'], 1.0)
 
-    #     self.assertEqual(1, 1)
 
+    #-----------------------------------------------------------------------------
+    @patch('analytics.reporte_restock.calcular_restock')
+    def test_reporte_2_ok(self, mock_reporte):
+
+        """
+        -----------------------------------------------------------------------
+        Test para el endpoint 'get_reporte_restock_02'
+        Testear que el endpoint funciona OK
+        -----------------------------------------------------------------------
+        """
+
+        mock_reporte.return_value = {'status': 'success',}
+
+        # Construimos el request
+        url = reverse('analytics:get-reporte-restock-02', args=[self.magno_brasserie.id])
+        response = self.client.get(url)
+        json_response = json.dumps(response.data)
+
+        #print('::: RESPONSE DATA :::')
+        #print(response.data)
+
+        #print('::: RESPONSE DATA - JSON :::')
+        #print(json_response)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     #-----------------------------------------------------------------------------
     @patch('analytics.reporte_restock.calcular_restock')

@@ -20,6 +20,7 @@ from analytics import reporte_mermas as rm
 from analytics import reporte_stock as rs
 from analytics import reporte_restock as restock
 from analytics import reporte_productos_sin_registro as r_sin_registro
+from analytics import reporte_restock_02 as restock_02
 from core import models
 
 
@@ -316,4 +317,23 @@ def get_botellas_merma(request, merma_id):
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
+"""
+-----------------------------------------------------------------------------------
+Endpoint para el Reporte de Restock 02
+- Este reporte utiliza Pandas para optimizar recursos
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_reporte_restock_02(request, sucursal_id):
 
+    if request.method == 'GET':
+
+        # Ejecutamos el reporte
+        reporte = restock_02.calcular_restock(sucursal_id)
+
+        return Response(reporte)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
