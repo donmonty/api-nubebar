@@ -19,4 +19,5 @@ urlpatterns = [
     path('get-reporte-restock/sucursal/<int:sucursal_id>', views.get_reporte_restock, name='get-reporte-restock'),
     path('get-detalle-botellas-merma/merma/<int:merma_id>/', views.get_botellas_merma, name='get-detalle-botellas-merma'),
     path('get-reporte-restock-02/sucursal/<int:sucursal_id>', views.get_reporte_restock_02, name='get-reporte-restock-02'),
+    path('get-reporte-mermas-tiempo/almacen/<int:almacen_id>/fecha_inicial/<str:fecha_inicial>/fecha_final/<str:fecha_final>', views.get_reporte_mermas_tiempo, name='get-reporte-mermas-tiempo'),
 ]

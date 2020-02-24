@@ -21,6 +21,7 @@ from analytics import reporte_stock as rs
 from analytics import reporte_restock as restock
 from analytics import reporte_productos_sin_registro as r_sin_registro
 from analytics import reporte_restock_02 as restock_02
+from analytics import reporte_mermas_tiempo
 from core import models
 
 
@@ -332,6 +333,27 @@ def get_reporte_restock_02(request, sucursal_id):
 
         # Ejecutamos el reporte
         reporte = restock_02.calcular_restock(sucursal_id)
+
+        return Response(reporte)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para el Reporte de Mermas x Tiempo
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_reporte_mermas_tiempo(request, almacen_id, fecha_inicial, fecha_final):
+
+    if request.method == 'GET':
+
+        # Ejecutamos el reporte
+        reporte = reporte_mermas_tiempo.get_mermas_tiempo(almacen_id, fecha_inicial, fecha_final)
 
         return Response(reporte)
 
