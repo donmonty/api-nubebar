@@ -60,8 +60,8 @@ def get_mermas_tiempo(almacen_id, fecha_inicial, fecha_final):
 
             merma = float(item['merma'].quantize(Decimal('.01'), rounding=ROUND_UP))
             porcentaje = float(item['porcentaje'].quantize(Decimal('.01'), rounding=ROUND_UP))
-            consumo_facturado = float(item['consumo_ventas'].quantize(Decimal('.01'), rounding=ROUND_UP))
-            consumo_real = float(item['consumo_real'].quantize(Decimal('.01'), rounding=ROUND_UP))
+            consumo_facturado = 0 if item['consumo_ventas'] is None else float(item['consumo_ventas'].quantize(Decimal('.01'), rounding=ROUND_UP))
+            consumo_real = 0 if item['consumo_real'] is None else float(item['consumo_real'].quantize(Decimal('.01'), rounding=ROUND_UP))
             fecha_final = item['fecha_final'].strftime('%Y-%m-%d')
             
             registro['Ingrediente'] = item['nombre_ingrediente']
@@ -118,8 +118,8 @@ def get_mermas_tiempo(almacen_id, fecha_inicial, fecha_final):
         }
         data = []
         registro = dframe.to_dict(orient='records')
-        data.append(registro)
-        serie_producto['data'] = data
+        #data.append(registro)
+        serie_producto['data'] = registro
         series.append(serie_producto)
     
     #print('::: SERIES :::')
@@ -139,7 +139,7 @@ def get_mermas_tiempo(almacen_id, fecha_inicial, fecha_final):
 
     df_tabla['Porcentaje'] = (df_tabla['Merma'] / df_tabla['Consumo Facturado']) * 100
     df_tabla['Tragos'] = (df_tabla['Merma'] / 60) * -1
-    df_tabla = df_tabla.round({'Porcentaje': 1, 'Tragos': 1})
+    df_tabla = df_tabla.round({'Consumo Facturado': 1, 'Consumo Real': 1, 'Merma': 1, 'Porcentaje': 1, 'Tragos': 1})
     df_tabla.reset_index(inplace=True)
     tabla = df_tabla.to_dict(orient='records')
 
