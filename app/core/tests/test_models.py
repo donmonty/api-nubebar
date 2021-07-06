@@ -5,6 +5,7 @@ from core import models
 #from datetime import date
 import datetime
 from freezegun import freeze_time
+import json
 
 
 #def usuario_dummy(email='test@foodstack.mx', password='password123'):
@@ -452,6 +453,7 @@ class ModelTests(TestCase):
 
         self.assertEqual(almacen.nombre, nombre)
         self.assertEqual(almacenes_sucursal.count(), 1)
+        self.assertEqual(almacen.tipo, '1')
 
     
     def test_crear_caja(self):
@@ -704,7 +706,8 @@ class ModelTests(TestCase):
         #mock_date.today.return_value = datetime.date(2019, 1, 1)
         
 
-        sucursal = 'TACOS-LINK-PROVIDENCIA'
+        #sucursal = 'TACOS-LINK-PROVIDENCIA'
+        sucursal = sucursal_dummy()
         codigo_pos = '00050'
         caja = 1
         nombre = 'CARAJILLO'
@@ -720,7 +723,6 @@ class ModelTests(TestCase):
         #print('::: STR PRODUCTO NO REGISTRADO :::')
         #print(producto_sin_registro)
 
-        self.assertEqual(producto_sin_registro.sucursal, 'TACOS-LINK-PROVIDENCIA')
+        self.assertEqual(producto_sin_registro.sucursal.slug, 'TACOS-LINK-PROVIDENCIA')
         self.assertEqual(producto_sin_registro.fecha, datetime.date(2019, 6, 1))
-        
 

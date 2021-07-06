@@ -4,7 +4,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.conf import settings
 
 import datetime
-#from datetime import date
+import decimal
+
 
 
 """
@@ -214,14 +215,20 @@ una o varias cajas.
 
 class Almacen(models.Model):
 
+	# Tipos de almacenes
+	BARRA = '1'
+	BODEGA = '0'
+	TIPOS_ALMACEN = ((BARRA, 'BARRA'), (BODEGA, 'BODEGA'))
+
 	nombre 		= models.CharField(max_length=255, blank=True)
 	numero 		= models.IntegerField(default=1)
 	sucursal 	= models.ForeignKey(Sucursal, related_name='almacenes', on_delete=models.CASCADE)
+	tipo 		= models.CharField(max_length=1, choices=TIPOS_ALMACEN, default=BARRA)
 
 	def __str__(self):
 		nombre_sucursal = self.sucursal.nombre
 
-		return '{} - {}'.format(self.nombre, nombre_sucursal)
+		return 'NOMBRE: {} - SUCURSAL: {} - TIPO: {}'.format(self.nombre, nombre_sucursal, self.tipo)
 
 
 """
@@ -310,12 +317,17 @@ class Producto(models.Model):
 	graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
 	capacidad 					= models.IntegerField(blank=True, null=True)
 	origen_del_producto 		= models.CharField(max_length=255, blank=True)
+	fecha_envasado 				= models.CharField(max_length=255, blank=True)
 	fecha_importacion 			= models.CharField(max_length=255, blank=True)
+	lote_produccion 			= models.CharField(max_length=255, blank=True)
+	numero_pedimento 			= models.CharField(max_length=255, blank=True)
 	nombre_fabricante 			= models.CharField(max_length=255, blank=True)
 	rfc_fabricante 				= models.CharField(max_length=255, blank=True)
 
 	# Registro con app iOS
 	fecha_registro 				= models.DateTimeField(auto_now_add=True)
+	codigo_barras 				= models.CharField(max_length=255, blank=True)
+	peso_nueva 					= models.IntegerField(blank=True, null=True)
 	peso_cristal 				= models.IntegerField(blank=True, null=True)
 	precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 
@@ -323,7 +335,7 @@ class Producto(models.Model):
 	def __str__(self):
 		nombre_ingrediente = self.ingrediente.nombre
 
-		return 'NOMBRE: {} - FOLIO: {} - PESO CRISTAL: {} - PRECIO UNITARIO: {}'.format(nombre_ingrediente, self.folio, self.peso_cristal, self.precio_unitario)
+		return 'NOMBRE: {} - CAPACIDAD: {} - BARCODE: {} - PRECIO UNITARIO: {}'.format(nombre_ingrediente, self.capacidad, self.codigo_barras, self.precio_unitario)
 
 
 """
@@ -355,7 +367,10 @@ class Botella(models.Model):
 	graduacion_alcoholica 		= models.CharField(max_length=255, blank=True)
 	capacidad 					= models.IntegerField(blank=True, null=True)
 	origen_del_producto 		= models.CharField(max_length=255, blank=True)
+	fecha_envasado 				= models.CharField(max_length=255, blank=True)
 	fecha_importacion 			= models.CharField(max_length=255, blank=True)
+	lote_produccion 			= models.CharField(max_length=255, blank=True)
+	numero_pedimento 			= models.CharField(max_length=255, blank=True)
 	nombre_fabricante 			= models.CharField(max_length=255, blank=True)
 	rfc_fabricante 				= models.CharField(max_length=255, blank=True)
 	
@@ -366,12 +381,15 @@ class Botella(models.Model):
 	usuario_alta 				= models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL) # Revisar
 	sucursal 					= models.ForeignKey(Sucursal, related_name='botellas_sucursal', null=True, blank=True, on_delete=models.SET_NULL)
 	almacen 					= models.ForeignKey(Almacen, related_name='botellas_almacen', blank=True, null=True, on_delete=models.SET_NULL)
+	peso_nueva 					= models.IntegerField(blank=True, null=True, default=0)
 	peso_cristal 				= models.IntegerField(blank=True, null=True, default=0)
 	peso_inicial 				= models.IntegerField(blank=True, null=True, default=0)
+	peso_actual 				= models.IntegerField(blank=True, null=True, default=0)
 	precio_unitario 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 	proveedor 					= models.ForeignKey(Proveedor, related_name='botellas_proveedor', blank=True, null=True, on_delete=models.SET_NULL)
 	ingrediente 				= models.CharField(max_length=255, blank=True)
 	categoria 					= models.CharField(max_length=255, blank=True)
+	
 
 	def save(self, *args, **kwargs):
 		
@@ -400,7 +418,7 @@ class Botella(models.Model):
 		nombre_ingrediente = ingrediente.nombre
 		nombre_sucursal = self.sucursal.nombre
 		numero_almacen = self.almacen.numero
-		return 'FOLIO: {} - INGREDIENTE: {} - PESO CRISTAL: {} - PRECIO: {} - ESTADO: {} - SUCURSAL: {} - ALMACEN: {}'.format(self.folio, nombre_ingrediente, self.peso_cristal, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
+		return 'FOLIO: {} - INGREDIENTE: {} - CAPACIDAD: {} - PRECIO: {} - ESTADO: {} - SUCURSAL: {} - ALMACEN: {}'.format(self.folio, nombre_ingrediente, self.capacidad, self.precio_unitario, self.estado, nombre_sucursal, numero_almacen)
 
 """
 --------------------------------------------------------------------------
@@ -488,15 +506,109 @@ en la base de datos
 """
 
 class ProductoSinRegistro(models.Model):
+	sucursal    = models.ForeignKey(Sucursal, related_name='productos_sin_registro', on_delete=models.CASCADE)
+	codigo_pos  = models.CharField(max_length=255, blank=True)
+	caja        = models.IntegerField(null=True, blank=True)
+	nombre      = models.CharField(max_length=255, blank=True)
+	fecha       = models.DateField(blank=True, null=True, default=datetime.date.today)
+	unidades 	= models.IntegerField(null=True, blank=True)
+	importe 	= models.IntegerField(null=True, blank=True)
+	
+	def __str__(self):
+		return 'SUCURSAL: {} - CODIGO: {} - NOMBRE: {}'.format(self.sucursal.nombre, self.codigo_pos, self.nombre)
 
-    sucursal    = models.CharField(max_length=255, blank=True)
-    codigo_pos  = models.CharField(max_length=255, blank=True)
-    caja        = models.IntegerField(null=True, blank=True)
-    nombre      = models.CharField(max_length=255, blank=True)
-    fecha       = models.DateField(blank=True, null=True, default=datetime.date.today)
 
-    def __str__(self):
-        return 'SUCURSAL: {} - CODIGO: {} - NOMBRE: {}'.format(self.sucursal, self.codigo_pos, self.nombre)
+"""
+--------------------------------------------------------------------------
+Un ReporteMermas es el reporte de mermas de una Inspeccion
+--------------------------------------------------------------------------
+"""
+
+class ReporteMermas(models.Model):
+
+	fecha_registro 	= models.DateField(auto_now_add=True)
+	fecha_inicial 	= models.DateField(blank=True, null=True, default=None)
+	fecha_final 	= models.DateField(blank=True, null=True, default=None)
+	inspeccion 		= models.ForeignKey(Inspeccion, related_name='reportes_mermas_inspeccion', on_delete=models.CASCADE)
+	almacen 		= models.ForeignKey(Almacen, related_name='reportes_mermas_almacen', on_delete=models.CASCADE)
+
+	class Meta:
+		verbose_name_plural = 'ReportesMermas'
+		get_latest_by = 'fecha_registro'
+
+	def __str__(self):
+		return 'FECHA: {} - INSPECCION: {} - ALMACEN: {} - SUCURSAL: {} - FECHA INICIAL: {} - FECHA FINAL: {}'.format(self.fecha_registro, self.inspeccion.id, self.almacen.id, self.almacen.sucursal.nombre, self.fecha_inicial, self.fecha_final)
 
 
+"""
+--------------------------------------------------------------------------
+Una MermaIngrediente es la merma registrada para un Ingediente como resultado
+de hacer una Inspeccion
+--------------------------------------------------------------------------
+"""
 
+class MermaIngrediente(models.Model):
+
+	ingrediente 	= models.ForeignKey(Ingrediente, related_name='mermas_ingrediente', on_delete=models.CASCADE)
+	reporte 		= models.ForeignKey(ReporteMermas, related_name='mermas_reporte', blank=True, null=True, on_delete=models.CASCADE)
+	almacen 		= models.ForeignKey(Almacen, related_name='mermas_almacen', on_delete=models.CASCADE)
+	fecha_inicial 	= models.DateField(blank=True, null=True, default=None)
+	fecha_final 	= models.DateField(blank=True, null=True, default=None)
+	consumo_ventas 	= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+	consumo_real 	= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+	merma 			= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+	porcentaje 		= models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
+
+	class Meta:
+		verbose_name_plural = 'MermasIngredientes'
+
+	def save(self, *args, **kwargs):
+
+		try:
+			self.merma = self.consumo_ventas - self.consumo_real
+			self.porcentaje = (self.merma / self.consumo_ventas) * 100
+			super(MermaIngrediente, self).save(*args, **kwargs)
+
+		except (TypeError, ZeroDivisionError):
+
+			if (self.consumo_ventas is None) & (self.consumo_real is None):
+				self.merma = decimal.Decimal(0)
+				self.porcentaje = decimal.Decimal(0)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+			elif self.consumo_ventas is None:
+				self.merma = decimal.Decimal(0) - self.consumo_real
+				self.porcentaje = decimal.Decimal(-100)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+			elif self.consumo_real is None:
+				self.merma = self.consumo_ventas
+				self.porcentaje = decimal.Decimal(100)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+			else:
+				self.merma = self.consumo_ventas - self.consumo_real
+				self.porcentaje = decimal.Decimal(-100)
+				super(MermaIngrediente, self).save(*args, **kwargs)
+
+
+	def __str__(self):
+		return 'INGREDIENTE: {} - MERMA: {} ml - FECHA INICIAL: {} - FECHA FINAL: {} - REPORTE: {} - ALMACEN: {} - SUCURSAL: {}'.format(self.ingrediente.nombre, self.merma, self.fecha_inicial, self.fecha_final, self.reporte.id, self.almacen.id, self.almacen.sucursal.nombre)
+
+
+		# # Calculamos la merma
+		# if self.consumo_ventas == None:
+		# 	self.merma = decimal.Decimal(0) - self.consumo_real
+		# elif self.consumo_real == None:
+		# 	self.merma = self.consumo_ventas
+		# else:
+		# 	self.merma = self.consumo_ventas - self.consumo_real
+
+		# # Calculamos el porcentaje
+		# try:
+		# 	self.porcentaje = (self.merma / self.consumo_ventas) * 100
+		# 	super(MermaIngrediente, self).save(*args, **kwargs)
+
+		# except ZeroDivisionError, Exception:
+		# 	self.porcentaje = decimal.Decimal(0)
+		# 	super(MermaIngrediente, self).save(*args, **kwargs)

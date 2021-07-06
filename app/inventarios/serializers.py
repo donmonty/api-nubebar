@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from core import models
 import datetime
+import re
 from django.utils.timezone import make_aware
 
 
@@ -224,6 +225,7 @@ class BotellaItemInspeccionSerializer(serializers.ModelSerializer):
             'ingrediente',
             'categoria',
             'peso_inicial',
+            'peso_actual',
             'precio_unitario',
             'proveedor',
             'fecha_registro',
@@ -328,6 +330,7 @@ class BotellaUpdateEstadoSerializer(serializers.ModelSerializer):
             'ingrediente',
             'categoria',
             'peso_inicial',
+            'peso_actual',
             'precio_unitario',
             'proveedor',
             'fecha_registro',
@@ -356,10 +359,10 @@ class ItemInspeccionBotellaUpdateSerializer(serializers.ModelSerializer):
         # Actualizamos los datos de nuestro ItemInspeccion
         instance.peso_botella = validated_data.get('peso_botella', instance.peso_botella)
         instance.inspeccionado = True
-        # Actualizamos la instancia de nuestra Botella (estado y peso)
+        # Actualizamos la instancia de nuestra Botella (estado y peso y 'peso_actual')
         botella = instance.botella
         botella.estado = data_botella['estado']
-        botella.peso_inicial = validated_data.get('peso_botella', None)
+        botella.peso_actual = validated_data.get('peso_botella', None)
 
         # Si el estado de la botella es 'VACIA', asignamos la fecha de baja:
         if data_botella['estado'] == '0':
@@ -395,7 +398,7 @@ class ItemInspeccionUpdateSerializer2(serializers.ModelSerializer):
         # Actualizamos la instancia de nuestra Botella (estado y peso)
         botella = instance.botella
         botella.estado = data_botella['estado']
-        botella.peso_inicial = validated_data.get('peso_botella', None)
+        botella.peso_actual = validated_data.get('peso_botella', None)
 
 
 
@@ -471,6 +474,11 @@ class CategoriaIngredientesSerializer(serializers.ModelSerializer):
         )
 
 #------------------------------------------------------------------
+"""
+-----------------------------------------------------------------------
+Serializador para crear botellas nacionales
+-----------------------------------------------------------------------
+"""
 class BotellaPostSerializer(serializers.ModelSerializer):
 
     almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
@@ -496,7 +504,8 @@ class BotellaPostSerializer(serializers.ModelSerializer):
             'graduacion_alcoholica',
             'capacidad',
             'origen_del_producto',
-            'fecha_importacion',
+            'fecha_envasado',
+            'lote_produccion',
             'nombre_fabricante',
             'rfc_fabricante',
             # Datos registrados con app móvil:
@@ -508,6 +517,7 @@ class BotellaPostSerializer(serializers.ModelSerializer):
             'almacen',
             'peso_cristal',
             'peso_inicial',
+            'peso_actual',
             'precio_unitario',
             'proveedor',
             'ingrediente',
@@ -537,6 +547,7 @@ class BotellaPostSerializer(serializers.ModelSerializer):
 
         peso_cristal = producto_asignado.peso_cristal
         precio_unitario = producto_asignado.precio_unitario
+        capacidad = producto_asignado.capacidad
         #proveedor = producto_asignado.proveedor
 
         # Creamos la botella
@@ -553,9 +564,11 @@ class BotellaPostSerializer(serializers.ModelSerializer):
             nombre_marca=validated_data.get('nombre_marca'),
             tipo_producto=validated_data.get('tipo_producto'),
             graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
-            capacidad=validated_data.get('capacidad'),
+            #capacidad=validated_data.get('capacidad'),
+            capacidad=capacidad, # Tomamos la capacidad directamente del Producto porque a veces la info del marbete es erronea
             origen_del_producto=validated_data.get('origen_del_producto'),
-            fecha_importacion=validated_data.get('fecha_importacion'),
+            fecha_envasado=validated_data.get('fecha_envasado'),
+            lote_produccion=validated_data.get('lote_produccion'),
             nombre_fabricante=validated_data.get('nombre_fabricante'),
             rfc_fabricante=validated_data.get('rfc_fabricante'),
             # Datos registrados con app movil
@@ -566,7 +579,122 @@ class BotellaPostSerializer(serializers.ModelSerializer):
             precio_unitario=precio_unitario,
             proveedor=validated_data.get('proveedor'),
             # Datos obtenidos de la báscula
-            peso_inicial=validated_data.get('peso_inicial')
+            peso_inicial=validated_data.get('peso_inicial'),
+            peso_actual=validated_data.get('peso_inicial')
+
+        )
+
+        return botella
+
+
+#------------------------------------------------------------------
+"""
+-----------------------------------------------------------------------
+Serializador para crear botellas importadas
+-----------------------------------------------------------------------
+"""
+class BotellaImportadaPostSerializer(serializers.ModelSerializer):
+
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            # Datos del marbete
+            'folio',
+            'tipo_marbete',
+            'fecha_elaboracion_marbete',
+            'lote_produccion_marbete',
+            'url',
+            'producto',
+            # Datos del producto en el marbete
+            'nombre_marca',
+            'tipo_producto',
+            'graduacion_alcoholica',
+            'capacidad',
+            'origen_del_producto',
+            'fecha_importacion',
+            'numero_pedimento',
+            'nombre_fabricante',
+            'rfc_fabricante',
+            # Datos registrados con app móvil:
+            'estado',
+            'fecha_registro',
+            'fecha_baja',
+            'usuario_alta',
+            'sucursal',
+            'almacen',
+            'peso_cristal',
+            'peso_inicial',
+            'peso_actual',
+            'precio_unitario',
+            'proveedor',
+            'ingrediente',
+            'categoria'
+        )
+
+
+    def validate_peso(self, value):
+        """ Validamos que el campo de 'peso_inicial' no esté vacío """
+
+        if value is None:
+            raise serializers.ValidationError("Para guardar la botella primero hay que pesarla.")
+        
+        return value 
+
+
+    def create(self, validated_data):
+
+        # Tomamos las variables del Producto que se asignarán a la Botella
+        #producto_id = validated_data.get('producto')
+        producto_asignado = validated_data.get('producto')
+        producto_id = producto_asignado.id
+        #print('::: ID PRODUCTO :::')
+        #print(producto_id)
+        #producto_asignado = models.Producto.objects.get(id=producto_id)
+        
+
+        peso_cristal = producto_asignado.peso_cristal
+        precio_unitario = producto_asignado.precio_unitario
+        capacidad = producto_asignado.capacidad
+        #proveedor = producto_asignado.proveedor
+
+        # Creamos la botella
+        botella = models.Botella.objects.create(
+            folio=validated_data.get('folio'),
+            tipo_marbete=validated_data.get('tipo_marbete'),
+            fecha_elaboracion_marbete=validated_data.get('fecha_elaboracion_marbete'),
+            lote_produccion_marbete=validated_data.get('lote_produccion_marbete'),
+            url=validated_data.get('url'),
+            producto=producto_asignado,
+            #producto=producto_asignado.id,
+            #producto=validated_data.get('producto'),
+            # Datos del producto en marbete
+            nombre_marca=validated_data.get('nombre_marca'),
+            tipo_producto=validated_data.get('tipo_producto'),
+            graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
+            #capacidad=validated_data.get('capacidad'),
+            capacidad=capacidad, # Tomamos la capacidad directamente del Producto porque a veces la info del marbete es erronea
+            origen_del_producto=validated_data.get('origen_del_producto'),
+            fecha_importacion=validated_data.get('fecha_importacion'),
+            numero_pedimento=validated_data.get('numero_pedimento'),
+            nombre_fabricante=validated_data.get('nombre_fabricante'),
+            rfc_fabricante=validated_data.get('rfc_fabricante'),
+            # Datos registrados con app movil
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            peso_cristal=peso_cristal,
+            precio_unitario=precio_unitario,
+            proveedor=validated_data.get('proveedor'),
+            # Datos obtenidos de la báscula
+            peso_inicial=validated_data.get('peso_inicial'),
+            peso_actual=validated_data.get('peso_inicial')
 
         )
 
@@ -622,6 +750,539 @@ class ProductoWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Es necesario ingresar el precio unitario.")
         
         return value
+
+
+#------------------------------------------------------------------
+"""
+-------------------------------------------------------------------
+Serializador para crear un Producto importado
+- El peso del cristal es proporcionado por el usuario
+- El peso de la botella nueva se calcula a partor del peso del cristal
+-------------------------------------------------------------------
+"""
+class ProductoImportadoWriteSerializer(serializers.ModelSerializer):
+
+    ingrediente = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Ingrediente.objects.all())
+
+    class Meta:
+        model = models.Producto
+        fields = (
+            'id',
+            # Datos del marbete
+            'folio',
+            'tipo_marbete',
+            'fecha_elaboracion_marbete',
+            'lote_produccion_marbete',
+            'url',
+            # Datos del producto en el marbete
+            'nombre_marca',
+            'tipo_producto',
+            'graduacion_alcoholica',
+            'capacidad',
+            'origen_del_producto',
+            'fecha_importacion',
+            'numero_pedimento',
+            'nombre_fabricante',
+            'rfc_fabricante',
+            'fecha_registro',
+            # Datos obligatorios ingresados por el usuario
+            'peso_cristal',
+            'precio_unitario',
+            'ingrediente'
+
+        )
+
+
+    def validate_peso_cristal(self, value):
+        """ Validamos que el campo de 'peso_cristal' no esté vacío """
+
+        if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el peso del cristal.")
+        
+        return value
+       
+
+
+    def validate_precio_unitario(self, value):
+        """ Validamos que el campo 'precio_unitario' no esté vacío """ 
+        if not value:
+        #if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el precio unitario.")
+        
+        return value
+
+    def create(self, validated_data):
+
+        # Calculamos 'peso_nueva' a partir del peso del cristal, su capacidad y la densidad del ingrediente
+        peso_cristal = validated_data.get('peso_cristal')
+        capacidad = validated_data.get('capacidad')
+        ingrediente = validated_data.get('ingrediente')
+        factor_peso = ingrediente.factor_peso
+        peso_nueva = peso_cristal + (capacidad * factor_peso)
+
+        # Creamos el Producto
+        producto = models.Producto.objects.create(
+            folio=validated_data.get('folio'),
+            tipo_marbete=validated_data.get('tipo_marbete'),
+            fecha_elaboracion_marbete=validated_data.get('fecha_elaboracion_marbete'),
+            lote_produccion_marbete=validated_data.get('lote_produccion_marbete'),
+            url=validated_data.get('url'),
+            
+            # Datos del producto en marbete
+            nombre_marca=validated_data.get('nombre_marca'),
+            tipo_producto=validated_data.get('tipo_producto'),
+            graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
+            capacidad=validated_data.get('capacidad'),
+            origen_del_producto=validated_data.get('origen_del_producto'),
+            fecha_importacion=validated_data.get('fecha_importacion'),
+            numero_pedimento=validated_data.get('numero_pedimento'),
+            nombre_fabricante=validated_data.get('nombre_fabricante'),
+            rfc_fabricante=validated_data.get('rfc_fabricante'),
+
+            # Datos registrados con app movil
+            peso_nueva=peso_nueva,
+            peso_cristal=validated_data.get('peso_cristal'),
+            precio_unitario=validated_data.get('precio_unitario'),
+            ingrediente=validated_data.get('ingrediente'),
+        )
+
+        return producto
+
+
+#------------------------------------------------------------------
+"""
+-------------------------------------------------------------------
+Serializador para crear un Producto nacional
+-------------------------------------------------------------------
+"""
+class ProductoNacionalWriteSerializer(serializers.ModelSerializer):
+
+    ingrediente = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Ingrediente.objects.all())
+
+    class Meta:
+        model = models.Producto
+        fields = (
+            'id',
+            # Datos del marbete
+            'folio',
+            'tipo_marbete',
+            'fecha_elaboracion_marbete',
+            'lote_produccion_marbete',
+            'url',
+            # Datos del producto en el marbete
+            'nombre_marca',
+            'tipo_producto',
+            'graduacion_alcoholica',
+            'capacidad',
+            'origen_del_producto',
+            'fecha_envasado',
+            'lote_produccion',
+            'nombre_fabricante',
+            'rfc_fabricante',
+            'fecha_registro',
+            # Datos obligatorios ingresados por el usuario
+            'peso_cristal',
+            'precio_unitario',
+            'ingrediente'
+
+        )
+
+
+    def validate_peso_cristal(self, value):
+        """ Validamos que el campo de 'peso_cristal' no esté vacío """
+
+        if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el peso del cristal.")
+        
+        return value
+
+
+    def validate_precio_unitario(self, value):
+        """ Validamos que el campo 'precio_unitario' no esté vacío """ 
+        if not value:
+        #if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el precio unitario.")
+        
+        return value
+
+    def create(self, validated_data):
+
+        # Calculamos 'peso_nueva' a partir del peso del cristal, su capacidad y la densidad del ingrediente
+        peso_cristal = validated_data.get('peso_cristal')
+        capacidad = validated_data.get('capacidad')
+        ingrediente = validated_data.get('ingrediente')
+        factor_peso = ingrediente.factor_peso
+        peso_nueva = peso_cristal + (capacidad * factor_peso)
+
+        # Creamos el Producto
+        producto = models.Producto.objects.create(
+            folio=validated_data.get('folio'),
+            tipo_marbete=validated_data.get('tipo_marbete'),
+            fecha_elaboracion_marbete=validated_data.get('fecha_elaboracion_marbete'),
+            lote_produccion_marbete=validated_data.get('lote_produccion_marbete'),
+            url=validated_data.get('url'),
+            
+            # Datos del producto en marbete
+            nombre_marca=validated_data.get('nombre_marca'),
+            tipo_producto=validated_data.get('tipo_producto'),
+            graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
+            capacidad=validated_data.get('capacidad'),
+            origen_del_producto=validated_data.get('origen_del_producto'),
+            fecha_envasado=validated_data.get('fecha_envasado'),
+            lote_produccion=validated_data.get('lote_produccion'),
+            nombre_fabricante=validated_data.get('nombre_fabricante'),
+            rfc_fabricante=validated_data.get('rfc_fabricante'),
+
+            # Datos registrados con app movil
+            peso_nueva=peso_nueva,
+            peso_cristal=validated_data.get('peso_cristal'),
+            precio_unitario=validated_data.get('precio_unitario'),
+            ingrediente=validated_data.get('ingrediente'),
+        )
+
+        return producto
+
+
+#------------------------------------------------------------------
+"""
+-------------------------------------------------------------------
+Serializador para crear un Producto importado, registrando el peso
+de la botella nueva (sin tapa)
+-------------------------------------------------------------------
+"""
+class ProductoImportadoFullWriteSerializer(serializers.ModelSerializer):
+
+    ingrediente = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Ingrediente.objects.all())
+
+    class Meta:
+        model = models.Producto
+        fields = (
+            'id',
+            # Datos del marbete
+            'folio',
+            'tipo_marbete',
+            'fecha_elaboracion_marbete',
+            'lote_produccion_marbete',
+            'url',
+            # Datos del producto en el marbete
+            'nombre_marca',
+            'tipo_producto',
+            'graduacion_alcoholica',
+            'capacidad',
+            'origen_del_producto',
+            'fecha_importacion',
+            'numero_pedimento',
+            'nombre_fabricante',
+            'rfc_fabricante',
+            'fecha_registro',
+            # Datos obligatorios ingresados por el usuario
+            #'peso_cristal',
+            'peso_nueva',
+            'precio_unitario',
+            'ingrediente'
+
+        )
+
+
+    def validate_peso_nueva(self, value):
+        """ Validamos que el campo de 'peso_nueva' no esté vacío """
+
+        if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el peso de la botella nueva sin tapa.")
+        
+        return value
+
+
+    def validate_precio_unitario(self, value):
+        """ Validamos que el campo 'precio_unitario' no esté vacío """ 
+        if not value:
+        #if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el precio unitario.")
+        
+        return value
+
+    def create(self, validated_data):
+
+        # Calculamos el peso del cristal a partir del peso de la botella nueva sin tapa
+        peso_nueva = validated_data.get('peso_nueva')
+        capacidad = validated_data.get('capacidad')
+        ingrediente = validated_data.get('ingrediente')
+        factor_peso = ingrediente.factor_peso
+        peso_cristal = peso_nueva - (capacidad * factor_peso)
+
+        # Creamos el Producto
+        producto = models.Producto.objects.create(
+            folio=validated_data.get('folio'),
+            tipo_marbete=validated_data.get('tipo_marbete'),
+            fecha_elaboracion_marbete=validated_data.get('fecha_elaboracion_marbete'),
+            lote_produccion_marbete=validated_data.get('lote_produccion_marbete'),
+            url=validated_data.get('url'),
+            
+            # Datos del producto en marbete
+            nombre_marca=validated_data.get('nombre_marca'),
+            tipo_producto=validated_data.get('tipo_producto'),
+            graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
+            capacidad=validated_data.get('capacidad'),
+            origen_del_producto=validated_data.get('origen_del_producto'),
+            fecha_importacion=validated_data.get('fecha_importacion'),
+            numero_pedimento=validated_data.get('numero_pedimento'),
+            nombre_fabricante=validated_data.get('nombre_fabricante'),
+            rfc_fabricante=validated_data.get('rfc_fabricante'),
+
+            # Datos registrados con app movil
+            peso_nueva=validated_data.get('peso_nueva'),
+            peso_cristal=peso_cristal,
+            precio_unitario=validated_data.get('precio_unitario'),
+            ingrediente=validated_data.get('ingrediente'),
+        )
+
+        return producto
+
+#------------------------------------------------------------------
+"""
+-------------------------------------------------------------------
+Serializador para crear un Producto nacional, registrando el peso
+de la botella nueva (sin tapa)
+-------------------------------------------------------------------
+"""
+class ProductoNacionalFullWriteSerializer(serializers.ModelSerializer):
+
+    ingrediente = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Ingrediente.objects.all())
+
+    class Meta:
+        model = models.Producto
+        fields = (
+            'id',
+            # Datos del marbete
+            'folio',
+            'tipo_marbete',
+            'fecha_elaboracion_marbete',
+            'lote_produccion_marbete',
+            'url',
+            # Datos del producto en el marbete
+            'nombre_marca',
+            'tipo_producto',
+            'graduacion_alcoholica',
+            'capacidad',
+            'origen_del_producto',
+            'fecha_importacion',
+            'numero_pedimento',
+            'nombre_fabricante',
+            'rfc_fabricante',
+            'fecha_registro',
+            # Datos obligatorios ingresados por el usuario
+            #'peso_cristal',
+            'peso_nueva',
+            'precio_unitario',
+            'ingrediente'
+
+        )
+
+
+    def validate_peso_nueva(self, value):
+        """ Validamos que el campo de 'peso_nueva' no esté vacío """
+
+        if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el peso de la botella nueva sin tapa.")
+        
+        return value
+
+
+    def validate_precio_unitario(self, value):
+        """ Validamos que el campo 'precio_unitario' no esté vacío """ 
+        if not value:
+        #if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el precio unitario.")
+        
+        return value
+
+    def create(self, validated_data):
+
+        # Calculamos el peso del cristal a partir del peso de la botella nueva sin tapa
+        peso_nueva = validated_data.get('peso_nueva')
+        capacidad = validated_data.get('capacidad')
+        ingrediente = validated_data.get('ingrediente')
+        factor_peso = ingrediente.factor_peso
+        peso_cristal = peso_nueva - (capacidad * factor_peso)
+
+        # Creamos el Producto
+        producto = models.Producto.objects.create(
+            folio=validated_data.get('folio'),
+            tipo_marbete=validated_data.get('tipo_marbete'),
+            fecha_elaboracion_marbete=validated_data.get('fecha_elaboracion_marbete'),
+            lote_produccion_marbete=validated_data.get('lote_produccion_marbete'),
+            url=validated_data.get('url'),
+            
+            # Datos del producto en marbete
+            nombre_marca=validated_data.get('nombre_marca'),
+            tipo_producto=validated_data.get('tipo_producto'),
+            graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
+            capacidad=validated_data.get('capacidad'),
+            origen_del_producto=validated_data.get('origen_del_producto'),
+            fecha_importacion=validated_data.get('fecha_importacion'),
+            numero_pedimento=validated_data.get('numero_pedimento'),
+            nombre_fabricante=validated_data.get('nombre_fabricante'),
+            rfc_fabricante=validated_data.get('rfc_fabricante'),
+
+            # Datos registrados con app movil
+            peso_nueva=validated_data.get('peso_nueva'),
+            peso_cristal=peso_cristal,
+            precio_unitario=validated_data.get('precio_unitario'),
+            ingrediente=validated_data.get('ingrediente'),
+        )
+
+        return producto
+
+
+#------------------------------------------------------------------
+"""
+-------------------------------------------------------------------
+Serializador para crear un Producto
+
+- Funciona con productos nacionales o importados
+- Si el cliente proporciona solo el peso del cristal, calcula el peso de la botella nueva
+- Si el cliente proporciona solo el peso de la botella nueva, calcula el peso del cristal
+
+-------------------------------------------------------------------
+"""
+class ProductoUniversalWriteSerializer(serializers.ModelSerializer):
+
+    ingrediente = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Ingrediente.objects.all())
+
+    class Meta:
+        model = models.Producto
+        fields = (
+            'id',
+            # Datos del marbete
+            'folio',
+            'tipo_marbete',
+            'fecha_elaboracion_marbete',
+            'lote_produccion_marbete',
+            'url',
+            # Datos del producto en el marbete
+            'nombre_marca',
+            'tipo_producto',
+            'graduacion_alcoholica',
+            'capacidad',
+            'origen_del_producto',
+            'fecha_importacion',
+            'fecha_envasado',
+            'numero_pedimento',
+            'lote_produccion',
+            'nombre_fabricante',
+            'rfc_fabricante',
+            'fecha_registro',
+            # Datos obligatorios ingresados por el usuario
+            #'peso_cristal',
+            'peso_nueva',
+            'peso_cristal',
+            'precio_unitario',
+            'ingrediente'
+
+        )
+        
+        extra_kwargs = {
+            'fecha_importacion': {'required': False},
+            'fecha_envasado': {'required': False},
+            'numero_pedimento': {'required': False},
+            'lote_produccion': {'required': False},
+        }
+
+
+    def validate_precio_unitario(self, value):
+        """ Validamos que el campo 'precio_unitario' no esté vacío """ 
+        if not value:
+        #if value is None:
+            raise serializers.ValidationError("Es necesario ingresar el precio unitario.")
+        
+        return value
+
+    def create(self, validated_data):
+
+        # Si el cliente proporciona el peso del cristal, calculamos el peso de la botella nueva
+        peso_cristal = validated_data.get('peso_cristal')
+        if peso_cristal is not None:
+
+            capacidad = validated_data.get('capacidad')
+            ingrediente = validated_data.get('ingrediente')
+            factor_peso = ingrediente.factor_peso
+            peso_nueva = round(peso_cristal + (capacidad * factor_peso))
+
+        # Si el cliente proporciona el peso de la botella nueva sin tapa, calculamos el peso del cristal
+        else:
+
+            peso_nueva = validated_data.get('peso_nueva')
+            capacidad = validated_data.get('capacidad')
+            ingrediente = validated_data.get('ingrediente')
+            factor_peso = ingrediente.factor_peso
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+        # Si el Producto es nacional, lo registramos con los atributos adhoc
+        folio_sat = validated_data.get('folio')
+        if folio_sat[0] == 'N':
+
+            # Creamos el Producto nacional
+            producto = models.Producto.objects.create(
+                folio=validated_data.get('folio'),
+                tipo_marbete=validated_data.get('tipo_marbete'),
+                fecha_elaboracion_marbete=validated_data.get('fecha_elaboracion_marbete'),
+                lote_produccion_marbete=validated_data.get('lote_produccion_marbete'),
+                url=validated_data.get('url'),
+                
+                # Datos del producto en marbete
+                nombre_marca=validated_data.get('nombre_marca'),
+                tipo_producto=validated_data.get('tipo_producto'),
+                graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
+                capacidad=validated_data.get('capacidad'),
+                origen_del_producto=validated_data.get('origen_del_producto'),
+                #fecha_importacion=validated_data.get('fecha_importacion'),
+                fecha_envasado=validated_data.get('fecha_envasado'),
+                #numero_pedimento=validated_data.get('numero_pedimento'),
+                lote_produccion=validated_data.get('lote_produccion'),
+                nombre_fabricante=validated_data.get('nombre_fabricante'),
+                rfc_fabricante=validated_data.get('rfc_fabricante'),
+
+                # Datos registrados con app movil
+                peso_nueva=peso_nueva,
+                peso_cristal=peso_cristal,
+                precio_unitario=validated_data.get('precio_unitario'),
+                ingrediente=validated_data.get('ingrediente'),
+            )
+
+            return producto
+
+        # Si el Producto es importado, lo registraos con los atributos adhoc
+        else:
+
+            # Creamos el Producto nacional
+            producto = models.Producto.objects.create(
+                folio=validated_data.get('folio'),
+                tipo_marbete=validated_data.get('tipo_marbete'),
+                fecha_elaboracion_marbete=validated_data.get('fecha_elaboracion_marbete'),
+                lote_produccion_marbete=validated_data.get('lote_produccion_marbete'),
+                url=validated_data.get('url'),
+                
+                # Datos del producto en marbete
+                nombre_marca=validated_data.get('nombre_marca'),
+                tipo_producto=validated_data.get('tipo_producto'),
+                graduacion_alcoholica=validated_data.get('graduacion_alcoholica'),
+                capacidad=validated_data.get('capacidad'),
+                origen_del_producto=validated_data.get('origen_del_producto'),
+                fecha_importacion=validated_data.get('fecha_importacion'),
+                #fecha_envasado=validated_data.get('fecha_envasado'),
+                numero_pedimento=validated_data.get('numero_pedimento'),
+                #lote_produccion=validated_data.get('lote_produccion'),
+                nombre_fabricante=validated_data.get('nombre_fabricante'),
+                rfc_fabricante=validated_data.get('rfc_fabricante'),
+
+                # Datos registrados con app movil
+                peso_nueva=peso_nueva,
+                peso_cristal=peso_cristal,
+                precio_unitario=validated_data.get('precio_unitario'),
+                ingrediente=validated_data.get('ingrediente'),
+            )
+
+            return producto
 
 
 #------------------------------------------------------------------
@@ -712,13 +1373,774 @@ class ProveedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Proveedor
         fields = '__all__'
+
+
+
+
+"""
+-------------------------------------------------------------------
+Serializer que retorna los datos de un Producto
+-------------------------------------------------------------------
+"""
+class ProductoSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Producto
+        fields = '__all__'
+        depth = 1
+
+
+"""
+-------------------------------------------------------------------
+Serializer que construye una Botella nueva
+-------------------------------------------------------------------
+"""
+class BotellaNuevaSerializer(serializers.ModelSerializer):
+
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'almacen',
+            'sucursal',
+            'usuario_alta',
+            'proveedor',
+            'producto',
+            'folio',
+            'peso_nueva',
+        )
+
+        extra_kwargs = {
+            'peso_nueva': {'required': False},
+        }
+
+    def create(self, validated_data):
+
+        peso_nueva = validated_data.get('peso_nueva')
+        producto = validated_data.get('producto')
+        ingrediente = producto.ingrediente
+        precio_unitario = producto.precio_unitario
+        capacidad = producto.capacidad
+        factor_peso = ingrediente.factor_peso
+
+        # Si contamos con el peso de la botella medido con la bascula:
+        if peso_nueva is not None:
+
+            peso_inicial = peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+            # Si el blueprint no cuenta con 'peso_nueva', le asignamos uno de referencia temporal
+            if producto.peso_nueva is None:
+                
+                producto.peso_nueva = peso_nueva
+                producto.save()
+
+        # Si no contamos con el peso medido con la bascula (pasa solo cuando registramos un vino de mesa):
+        else:
+
+            # Todos los blueprints de vinos de mesa deben por fuerza contar con 'peso_nueva'
+            peso_nueva = producto.peso_nueva
+            peso_inicial = producto.peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+
+        botella = models.Botella.objects.create(
+
+            # Datos tomados del blueprint y la bascula
+            producto=producto,
+            peso_nueva=peso_nueva,
+            peso_inicial=peso_inicial,
+            peso_cristal=peso_cristal,
+            peso_actual=peso_inicial,
+            precio_unitario=precio_unitario,
+
+            # Datos del marbete:
+            folio=validated_data.get('folio'),
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+
+            # Datos del producto en marbete:
+            nombre_marca='',
+            tipo_producto='',
+            graduacion_alcoholica='',
+            capacidad=capacidad,
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos adicionales:
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            proveedor=validated_data.get('proveedor')
+
+        )
+
+        return botella
+
+
+"""
+-------------------------------------------------------------------
+Serializer que construye una Producto nuevo sin necesidad de
+tomar los datos obtenidos del SAT
+-------------------------------------------------------------------
+"""
+class ProductoNuevoSerializer(serializers.ModelSerializer):
+
+    ingrediente = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Ingrediente.objects.all())
+
+    class Meta:
+        model = models.Producto
+        fields = (
+            'id',
+            'ingrediente',
+            'codigo_barras',
+            'nombre_marca',
+            'capacidad',
+            'precio_unitario',
+            'peso_nueva'
+        )
+
+    def create(self, validated_data):
+
+        ingrediente = validated_data.get('ingrediente')
+        factor_peso = ingrediente.factor_peso
+        capacidad = validated_data.get('capacidad')
+        peso_nueva = validated_data.get('peso_nueva')
+
+        if peso_nueva is not None:
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+        else:
+            peso_cristal =  None
+
+        producto = models.Producto.objects.create(
+
+            ingrediente=ingrediente,
+            codigo_barras=validated_data.get('codigo_barras'),
+            nombre_marca=validated_data.get('nombre_marca'),
+            capacidad=capacidad,
+            precio_unitario=validated_data.get('precio_unitario'),
+            peso_nueva=peso_nueva,
+            peso_cristal=peso_cristal,
+
+            # Datos de la botella en el marbete
+            tipo_producto='',
+            graduacion_alcoholica='',
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos del marbete:
+            folio='',
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+        )
+
+        return producto
+
+
+"""
+-------------------------------------------------------------------
+Serializer que retorna los datos de una Botella y su producto
+asociado
+-------------------------------------------------------------------
+"""
+class BotellaProductoSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'folio',
+            'producto',
+            'peso_nueva'
+        )
+        depth = 1
+
+
+"""
+-------------------------------------------------------------------
+Serializer que construye una Botella usada
+-------------------------------------------------------------------
+"""
+class BotellaUsadaSerializer(serializers.ModelSerializer):
+
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'almacen',
+            'sucursal',
+            'usuario_alta',
+            'proveedor',
+            'producto',
+            'folio',
+            'peso_nueva',
+            'peso_inicial',
+        )
+
+    def create(self, validated_data):
+
+        # Construimos los datos de peso de la botella
+        peso_nueva = validated_data.get('peso_nueva')
+        peso_inicial = validated_data.get('peso_inicial')
+        producto = validated_data.get('producto')
+        ingrediente = producto.ingrediente
+        precio_unitario = producto.precio_unitario
+        capacidad = producto.capacidad
+        factor_peso = ingrediente.factor_peso
+        peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+        estado_botella = '1'
+
+        # Creamos y guardamos la botella en la base de datos
+        botella = models.Botella.objects.create(
+
+            # Datos tomados del blueprint y la bascula
+            producto=producto,
+            peso_nueva=peso_nueva,
+            peso_inicial=peso_inicial,
+            peso_cristal=peso_cristal,
+            peso_actual=peso_inicial,
+            precio_unitario=precio_unitario,
+
+            # Datos del marbete:
+            folio=validated_data.get('folio'),
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+
+            # Datos del producto en marbete:
+            nombre_marca='',
+            tipo_producto='',
+            graduacion_alcoholica='',
+            capacidad=capacidad,
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos adicionales:
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            proveedor=validated_data.get('proveedor'),
+            estado=estado_botella,
+
+        )
+
+        return botella
+
+
+"""
+-------------------------------------------------------------------
+Serializer que construye una Botella nueva cuando el usuario captura
+manualmente el folio
+-------------------------------------------------------------------
+"""
+class BotellaNuevaSerializerFolioManual(serializers.ModelSerializer):
+
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'almacen',
+            'sucursal',
+            'usuario_alta',
+            'proveedor',
+            'producto',
+            'folio',
+            'peso_nueva',
+        )
+
+        extra_kwargs = {
+            'peso_nueva': {'required': False},
+        }
+
+    """
+    ---------------------------------------------------------------------------
+    Validamos el folio capturado manualmente por el usuario
+    ---------------------------------------------------------------------------
+    """
+    def validate_folio(self, value):
+
+        # Si folio es un empty string, retornamos un error
+        if value == '':
+            raise serializers.ValidationError("El número de folio está vacío.")
+
+        # Checamos la longitud del folio
+        length_folio = len(value)
+
+        """
+        -----------------------------------------------------------------------------------
+        Si el folio tiene entre 1 y 4 caracteres, asumimos que se trata de un folio custom:
+        -----------------------------------------------------------------------------------
+        """
+        if length_folio <= 4:
+
+            # Checamos que solo contenga digitos
+            if re.match('^[0-9]*$', value):
+                # Si solo contiene digitos, construimos el folio custom concatenando la sucursal y el folio capturado por el usuario
+                #sucursal_id = validated_data.get('sucursal').id
+                #sucursal_id = str(sucursal_id)
+                #value = sucursal_id + value
+                return value
+
+            # Si no contiene solo digitos, retornamos un error
+            raise serializers.ValidationError("El folio solo puede contener hasta 4 digitos del 0 al 9.")
+
         
+        """
+        ---------------------------------------------------------------------------
+        Si el folio contiene 12 caracteres, asumimos que es un folio del SAT sin
+        guion
+        ---------------------------------------------------------------------------
+        """
+        # Checamos si el folio tiene 12 caracteres
+        if length_folio == 12:
+            # Tomamos los primeros dos caracteres del folio
+            prefijo = value[:2]
+            numero_folio = value[2:]
+
+            # Checamos si los dos caracteres son de tipo folio nacional
+            if re.match('(Nn|nN|nn|NN)', prefijo):
+                prefijo = 'Nn'
+                # Checamos si el numero del folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+                # Si el numero de folio no contiene solo digitos, retornamos un error
+                raise serializers.ValidationError("El folio del SAT debe tener solo 10 dígitos.")
+
+            # Checamos si los dos caracteres son de tipo folio importado
+            if re.match('(Ii|iI|ii|II)', prefijo):
+                prefijo = 'Ii'
+                # Checamos si el numero del folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+                # Si el numero de folio no contiene solo digitos, retornamos un error
+                raise serializers.ValidationError("El folio del SAT debe contener solo 10 dígitos.")
+            
+            # Si los dos caracteres no son de folio nacional o importado, retornamos error
+            raise serializers.ValidationError("Los primeros dos caracteres del folio del SAT deben ser Nn o Ii.")
+
+        """
+        -----------------------------------------------------------------
+        Si el folio es de 13 caracteres, asumimos que es un folio del SAT
+        y que contiene al menos un guion
+        -----------------------------------------------------------------
+        """
+        if length_folio == 13:
+            # Eliminamos los guiones en el folio
+            value = value.replace('-', '')
+
+            # Si el folio resultante tiene menos de 12 caracteres, retornamos error
+            if len(value) < 12:
+                raise serializers.ValidationError('El folio del SAT solo debe contener un guion.')
+
+            # Si el folio resultante sigue siendo de 13 caracteres, retornamos error
+            if len(value) == 13:
+                raise serializers.ValidationError('El folio del SAT no puede tener más de 12 caracteres')
+
+            # Si el folio resultante es de 12 caracteres, continuamos
+
+            # Tomamos los dos primeros caracteres del folio
+            prefijo = value[:2]
+            numero_folio = value[2:]
+
+            # Checamos si los dos caracteres son de tipo folio nacional
+            if re.match('(Nn|nN|nn|NN)', prefijo):
+                prefijo = 'Nn'
+                # Checamos si el numero de folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+
+                # Si el numero de folio no contiene unicamente digitos, retornamos un error
+                raise serializers.ValidationError('El folio del SAT debe contener solo 10 digitos.')
+
+            # Checamos si los dos caracteres son de tipo folio importado
+            if re.match('(Ii|iI|ii|II)', prefijo):
+                prefijo = 'Ii'
+                # Checamos si el numero de folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+
+                # Si el numero de folio no contiene unicamente digitos, retornamos un error
+                raise serializers.ValidationError('El folio del SAT debe contener solo 10 digitos.')
+
+            # Si los dos caracteres no son de folio nacional o importado, retornamos un error
+            raise serializers.ValidationError('Los primeros dos caracteres del folio del SAT deben ser Nn o Ii.')
+
+        """
+        --------------------------------------------------------------------------
+        Si el folio tiene más de 4 caracteres, pero no tiene 12 ni 13 caracteres,
+        retornamos un error
+        --------------------------------------------------------------------------
+        """
+        raise serializers.ValidationError("El folio del SAT debe ser de 12 caracteres.")
+
+
+    def create(self, validated_data):
+
+        peso_nueva = validated_data.get('peso_nueva')
+        producto = validated_data.get('producto')
+        ingrediente = producto.ingrediente
+        precio_unitario = producto.precio_unitario
+        capacidad = producto.capacidad
+        factor_peso = ingrediente.factor_peso
+
+        # Si contamos con el peso de la botella medido con la bascula:
+        if peso_nueva is not None:
+
+            peso_inicial = peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+            # Si el blueprint no cuenta con 'peso_nueva', le asignamos uno de referencia temporal
+            if producto.peso_nueva is None:
+                
+                producto.peso_nueva = peso_nueva
+                producto.save()
+
+        # Si no contamos con el peso medido con la bascula (pasa solo cuando registramos un vino de mesa):
+        else:
+
+            # Todos los blueprints de vinos de mesa deben por fuerza contar con 'peso_nueva'
+            peso_nueva = producto.peso_nueva
+            peso_inicial = producto.peso_nueva
+            peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+
+        """
+        -----------------------------------------------
+        Procesamos los folios custom
+        -----------------------------------------------
+        """
+        # Tomamos el folio del payload
+        folio = validated_data.get('folio')
+
+        # Tomamos el ID de la sucursal
+        sucursal_id = str(validated_data.get('sucursal').id)
+
+        # Si el folio es custom, le adjuntamos el ID de la sucursal
+        if re.match('^[0-9]*$', folio):
+            folio = sucursal_id + folio
         
+        # Si el folio no es custom, lo dejamos como está
+        else:
+            folio = folio
+
+        #-------------------------------------------------
+
+        # Creamos la botella
+        botella = models.Botella.objects.create(
+
+            # Datos tomados del blueprint y la bascula
+            producto=producto,
+            peso_nueva=peso_nueva,
+            peso_inicial=peso_inicial,
+            peso_cristal=peso_cristal,
+            peso_actual=peso_inicial,
+            precio_unitario=precio_unitario,
+
+            # Datos del marbete:
+            folio=folio,
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+
+            # Datos del producto en marbete:
+            nombre_marca='',
+            tipo_producto='',
+            graduacion_alcoholica='',
+            capacidad=capacidad,
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos adicionales:
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            proveedor=validated_data.get('proveedor')
+
+        )
+
+        return botella
 
 
-    
+"""
+-------------------------------------------------------------------
+Serializer que construye una Botella usada cuando el folio se
+captura manualmente
+-------------------------------------------------------------------
+"""
+class BotellaUsadaSerializerFolioManual(serializers.ModelSerializer):
 
-    
+    almacen = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Almacen.objects.all())
+    sucursal = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Sucursal.objects.all())
+    usuario_alta = serializers.PrimaryKeyRelatedField(read_only=False, queryset=get_user_model().objects.all())
+    producto = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Producto.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(read_only=False, queryset=models.Proveedor.objects.all())
+
+    class Meta:
+        model = models.Botella
+        fields = (
+            'id',
+            'almacen',
+            'sucursal',
+            'usuario_alta',
+            'proveedor',
+            'producto',
+            'folio',
+            'peso_nueva',
+            'peso_inicial',
+        )
+
+    """
+    ---------------------------------------------------------------------------
+    Validamos el folio capturado manualmente por el usuario
+    ---------------------------------------------------------------------------
+    """
+    def validate_folio(self, value):
+
+        # Si folio es un empty string, retornamos un error
+        if value == '':
+            raise serializers.ValidationError("El número de folio está vacío.")
+
+        # Checamos la longitud del folio
+        length_folio = len(value)
+
+        """
+        -----------------------------------------------------------------------------------
+        Si el folio tiene entre 1 y 4 caracteres, asumimos que se trata de un folio custom:
+        -----------------------------------------------------------------------------------
+        """
+        if length_folio <= 4:
+
+            # Checamos que solo contenga digitos
+            if re.match('^[0-9]*$', value):
+                # Si solo contiene digitos, construimos el folio custom concatenando la sucursal y el folio capturado por el usuario
+                #sucursal_id = validated_data.get('sucursal').id
+                #sucursal_id = str(sucursal_id)
+                #value = sucursal_id + value
+                return value
+
+            # Si no contiene solo digitos, retornamos un error
+            raise serializers.ValidationError("El folio solo puede contener hasta 4 digitos del 0 al 9.")
+
+        
+        """
+        ---------------------------------------------------------------------------
+        Si el folio contiene 12 caracteres, asumimos que es un folio del SAT sin
+        guion
+        ---------------------------------------------------------------------------
+        """
+        # Checamos si el folio tiene 12 caracteres
+        if length_folio == 12:
+            # Tomamos los primeros dos caracteres del folio
+            prefijo = value[:2]
+            numero_folio = value[2:]
+
+            # Checamos si los dos caracteres son de tipo folio nacional
+            if re.match('(Nn|nN|nn|NN)', prefijo):
+                prefijo = 'Nn'
+                # Checamos si el numero del folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+                # Si el numero de folio no contiene solo digitos, retornamos un error
+                raise serializers.ValidationError("El folio del SAT debe tener solo 10 dígitos.")
+
+            # Checamos si los dos caracteres son de tipo folio importado
+            if re.match('(Ii|iI|ii|II)', prefijo):
+                prefijo = 'Ii'
+                # Checamos si el numero del folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+                # Si el numero de folio no contiene solo digitos, retornamos un error
+                raise serializers.ValidationError("El folio del SAT debe contener solo 10 dígitos.")
+            
+            # Si los dos caracteres no son de folio nacional o importado, retornamos error
+            raise serializers.ValidationError("Los primeros dos caracteres del folio del SAT deben ser Nn o Ii.")
+
+        """
+        -----------------------------------------------------------------
+        Si el folio es de 13 caracteres, asumimos que es un folio del SAT
+        y que contiene al menos un guion
+        -----------------------------------------------------------------
+        """
+        if length_folio == 13:
+            # Eliminamos los guiones en el folio
+            value = value.replace('-', '')
+
+            # Si el folio resultante tiene menos de 12 caracteres, retornamos error
+            if len(value) < 12:
+                raise serializers.ValidationError('El folio del SAT solo debe contener un guion.')
+
+            # Si el folio resultante sigue siendo de 13 caracteres, retornamos error
+            if len(value) == 13:
+                raise serializers.ValidationError('El folio del SAT no puede tener más de 12 caracteres')
+
+            # Si el folio resultante es de 12 caracteres, continuamos
+
+            # Tomamos los dos primeros caracteres del folio
+            prefijo = value[:2]
+            numero_folio = value[2:]
+
+            # Checamos si los dos caracteres son de tipo folio nacional
+            if re.match('(Nn|nN|nn|NN)', prefijo):
+                prefijo = 'Nn'
+                # Checamos si el numero de folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+
+                # Si el numero de folio no contiene unicamente digitos, retornamos un error
+                raise serializers.ValidationError('El folio del SAT debe contener solo 10 digitos.')
+
+            # Checamos si los dos caracteres son de tipo folio importado
+            if re.match('(Ii|iI|ii|II)', prefijo):
+                prefijo = 'Ii'
+                # Checamos si el numero de folio contiene solo digitos
+                if re.match('^[0-9]*$', numero_folio):
+                    # Construimos el folio normalizado
+                    value = prefijo + numero_folio
+                    return value
+
+                # Si el numero de folio no contiene unicamente digitos, retornamos un error
+                raise serializers.ValidationError('El folio del SAT debe contener solo 10 digitos.')
+
+            # Si los dos caracteres no son de folio nacional o importado, retornamos un error
+            raise serializers.ValidationError('Los primeros dos caracteres del folio del SAT deben ser Nn o Ii.')
+
+        """
+        --------------------------------------------------------------------------
+        Si el folio tiene más de 4 caracteres, pero no tiene 12 ni 13 caracteres,
+        retornamos un error
+        --------------------------------------------------------------------------
+        """
+        raise serializers.ValidationError("El folio del SAT debe ser de 12 caracteres.")
 
 
+    def create(self, validated_data):
 
+        # Construimos los datos de peso de la botella
+        peso_nueva = validated_data.get('peso_nueva')
+        peso_inicial = validated_data.get('peso_inicial')
+        producto = validated_data.get('producto')
+        ingrediente = producto.ingrediente
+        precio_unitario = producto.precio_unitario
+        capacidad = producto.capacidad
+        factor_peso = ingrediente.factor_peso
+        peso_cristal = round(peso_nueva - (capacidad * factor_peso))
+        estado_botella = '1'
+
+        """
+        -----------------------------------------------
+        Procesamos los folios custom
+        -----------------------------------------------
+        """
+        # Tomamos el folio del payload
+        folio = validated_data.get('folio')
+
+        # Tomamos el ID de la sucursal
+        sucursal_id = str(validated_data.get('sucursal').id)
+
+        # Si el folio es custom, le adjuntamos el ID de la sucursal
+        if re.match('^[0-9]*$', folio):
+            folio = sucursal_id + folio
+        
+        # Si el folio no es custom, lo dejamos como está
+        else:
+            folio = folio
+
+        # Creamos y guardamos la botella en la base de datos
+        botella = models.Botella.objects.create(
+
+            # Datos tomados del blueprint y la bascula
+            producto=producto,
+            peso_nueva=peso_nueva,
+            peso_inicial=peso_inicial,
+            peso_cristal=peso_cristal,
+            peso_actual=peso_inicial,
+            precio_unitario=precio_unitario,
+
+            # Datos del marbete:
+            folio=folio,
+            tipo_marbete='',
+            fecha_elaboracion_marbete='',
+            lote_produccion_marbete='',
+            url='',
+
+            # Datos del producto en marbete:
+            nombre_marca='',
+            tipo_producto='',
+            graduacion_alcoholica='',
+            capacidad=capacidad,
+            origen_del_producto='',
+            fecha_importacion='',
+            fecha_envasado='',
+            numero_pedimento='',
+            lote_produccion='',
+            nombre_fabricante='',
+            rfc_fabricante='',
+
+            # Datos adicionales:
+            usuario_alta=validated_data.get('usuario_alta'),
+            sucursal=validated_data.get('sucursal'),
+            almacen=validated_data.get('almacen'),
+            proveedor=validated_data.get('proveedor'),
+            estado=estado_botella,
+
+        )
+
+        return botella

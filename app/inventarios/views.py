@@ -3,7 +3,6 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action, permission_classes, authentication_classes
 from rest_framework.authentication import TokenAuthentication
-from inventarios.permissions import PermisoSucursal
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
@@ -12,9 +11,10 @@ from django.db.models import F, Q, QuerySet, Avg, Count, Sum, Subquery, OuterRef
 from django.shortcuts import get_object_or_404
 import math
 import json
+import re
 
 from inventarios import serializers
-from inventarios import scrapper
+from inventarios import scrapper, scrapper_2
 from core import models
 
 
@@ -643,6 +643,13 @@ def resumen_inspeccion_no_contado(request, inspeccion_id):
                 .values('count')
             )
         )
+        #print('::: QUERYSET 1 - ORIGINAL :::')
+        #print(queryset_1)
+
+        #QUERYSET 1 AJUSTADO: Excluimos ingredientes donde 'items_inspeccion' = 0
+        queryset_1 = queryset_1.exclude(items_inspeccion=0)
+        #print('::: QUERYSET 1 - FIX :::')
+        #print(queryset_1)
 
         # QUERYSET 2: Categorías que contienen items a inspeccionar
         queryset_2 = models.Categoria.objects.annotate(
@@ -772,6 +779,13 @@ def resumen_inspeccion_contado(request, inspeccion_id):
                 .values('count')
             )
         )
+        #print('::: QUERYSET 1 - ORIGINAL :::')
+        #print(queryset_1)
+
+        #QUERYSET 1 AJUSTADO: Excluimos ingredientes donde 'items_inspeccion' = 0
+        queryset_1 = queryset_1.exclude(items_inspeccion=0)
+        #print('::: QUERYSET 1 - FIX :::')
+        #print(queryset_1)
 
         # QUERYSET 2: Categorías que contienen items a inspeccionar
         queryset_2 = models.Categoria.objects.annotate(
@@ -1003,6 +1017,13 @@ def detalle_botella_inspeccion(request, inspeccion_id, folio_id):
 
         inspeccion_id = int(inspeccion_id)
 
+        # Si se trata de un folio custom, le adjuntamos el numero de la sucursal
+        if re.match('^[0-9]*$', folio_id):
+
+            inspeccion = models.Inspeccion.objects.get(id=inspeccion_id)
+            sucursal_id = str(inspeccion.sucursal.id)
+            folio_id = sucursal_id + folio_id
+
         # Checamos que la botella escaneada pertenezca a la Inspección en curso
         if models.ItemInspeccion.objects.filter(inspeccion__id=inspeccion_id, botella__folio=folio_id).exists():
             item_inspeccion = models.ItemInspeccion.objects.get(inspeccion__id=inspeccion_id, botella__folio=folio_id)
@@ -1019,6 +1040,9 @@ def detalle_botella_inspeccion(request, inspeccion_id, folio_id):
         # Si la botella no pertenece a la Inspección en curso, notificamos al usuario
         else:
             return Response({'mensaje': 'Esta botella no es parte de la inspección.'})
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -1167,7 +1191,7 @@ modifica su peso ad hoc
 @api_view(['PATCH'],)
 @permission_classes((IsAuthenticated,))
 @authentication_classes((TokenAuthentication,))
-def update_botella_nueva_vacia(request):
+def update_botella_nueva_vacia_2(request):
 
     if request.method == 'PATCH':
 
@@ -1427,42 +1451,93 @@ def crear_botella(request):
 
     if request.method == 'POST':
 
-        payload = {}
-        # Tomamos los datos de la Botella del request
-        payload['folio'] = request.data['folio'] # REQUERIDO
-        payload['tipo_marbete'] = request.data['tipo_marbete'] 
-        payload['fecha_elaboracion_marbete'] = request.data['fecha_elaboracion_marbete']
-        payload['lote_produccion_marbete'] = request.data['lote_produccion_marbete']
-        payload['url'] = request.data['url']
+        # Tomamos el folio
+        folio = request.data['folio']
 
-        #payload['producto'] = request.data['producto'] # REQUERIDO
+        #-----------------------------------------------------------------------------
+        # Si la botella es nacional, serializamos con los datos de botella nacional
+        #-----------------------------------------------------------------------------
+        if folio[0] == 'N':
 
-        payload['nombre_marca'] = request.data['nombre_marca']
-        payload['tipo_producto'] = request.data['tipo_producto']
-        payload['graduacion_alcoholica'] = request.data['graduacion_alcoholica']
-        payload['capacidad'] = request.data['capacidad']
-        payload['origen_del_producto'] = request.data['origen_del_producto']
-        payload['fecha_importacion'] = request.data['fecha_importacion']
-        payload['nombre_fabricante'] = request.data['nombre_fabricante']
-        payload['rfc_fabricante'] = request.data['rfc_fabricante']
+            payload = {}
+            # Tomamos los datos de la Botella del request
+            payload['folio'] = request.data['folio'] # REQUERIDO
+            payload['tipo_marbete'] = request.data['tipo_marbete'] 
+            payload['fecha_elaboracion_marbete'] = request.data['fecha_elaboracion_marbete']
+            payload['lote_produccion_marbete'] = request.data['lote_produccion_marbete']
+            payload['url'] = request.data['url']
 
-        # DATOS QUE NO SON PARTE DEL MARBETE
-        payload['producto'] = request.data['producto'] # REQUERIDO
-        payload['usuario_alta'] = request.user.id
-        payload['sucursal'] = request.data['sucursal'] # REQUERIDO
-        payload['almacen'] = request.data['almacen'] # REQUERIDO
-        payload['proveedor'] = request.data['proveedor'] # REQUERIDO
+            #payload['producto'] = request.data['producto'] # REQUERIDO
 
-        payload['peso_inicial'] = request.data['peso_inicial'] # REQUERIDO
+            payload['nombre_marca'] = request.data['nombre_marca']
+            payload['tipo_producto'] = request.data['tipo_producto']
+            payload['graduacion_alcoholica'] = request.data['graduacion_alcoholica']
+            #payload['capacidad'] = request.data['capacidad']
+            payload['origen_del_producto'] = request.data['origen_del_producto']
+            payload['fecha_envasado'] = request.data['fecha_envasado']
+            payload['lote_produccion'] = request.data['lote_produccion']
+            payload['nombre_fabricante'] = request.data['nombre_fabricante']
+            payload['rfc_fabricante'] = request.data['rfc_fabricante']
 
-        serializer = serializers.BotellaPostSerializer(data=payload)
+            # DATOS QUE NO SON PARTE DEL MARBETE
+            payload['producto'] = request.data['producto'] # REQUERIDO
+            payload['usuario_alta'] = request.user.id
+            payload['sucursal'] = request.data['sucursal'] # REQUERIDO
+            payload['almacen'] = request.data['almacen'] # REQUERIDO
+            payload['proveedor'] = request.data['proveedor'] # REQUERIDO
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            payload['peso_inicial'] = request.data['peso_inicial'] # REQUERIDO
 
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            serializer = serializers.BotellaPostSerializer(data=payload)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        #-----------------------------------------------------------------------------
+        # Si la botella es importada, serializamos con los datos de botella importada
+        #-----------------------------------------------------------------------------
+        else: 
+            payload = {}
+            # Tomamos los datos de la Botella del request
+            payload['folio'] = request.data['folio'] # REQUERIDO
+            payload['tipo_marbete'] = request.data['tipo_marbete'] 
+            payload['fecha_elaboracion_marbete'] = request.data['fecha_elaboracion_marbete']
+            payload['lote_produccion_marbete'] = request.data['lote_produccion_marbete']
+            payload['url'] = request.data['url']
+
+            #payload['producto'] = request.data['producto'] # REQUERIDO
+
+            payload['nombre_marca'] = request.data['nombre_marca']
+            payload['tipo_producto'] = request.data['tipo_producto']
+            payload['graduacion_alcoholica'] = request.data['graduacion_alcoholica']
+            #payload['capacidad'] = request.data['capacidad']
+            payload['origen_del_producto'] = request.data['origen_del_producto']
+            payload['fecha_importacion'] = request.data['fecha_importacion']
+            payload['numero_pedimento'] = request.data['numero_pedimento']
+            payload['nombre_fabricante'] = request.data['nombre_fabricante']
+            payload['rfc_fabricante'] = request.data['rfc_fabricante']
+
+            # DATOS QUE NO SON PARTE DEL MARBETE
+            payload['producto'] = request.data['producto'] # REQUERIDO
+            payload['usuario_alta'] = request.user.id
+            payload['sucursal'] = request.data['sucursal'] # REQUERIDO
+            payload['almacen'] = request.data['almacen'] # REQUERIDO
+            payload['proveedor'] = request.data['proveedor'] # REQUERIDO
+
+            payload['peso_inicial'] = request.data['peso_inicial'] # REQUERIDO
+
+            serializer = serializers.BotellaImportadaPostSerializer(data=payload)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST)        
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -1501,6 +1576,50 @@ def get_marbete_sat_producto(request, folio_id):
             return Response(data_marbete)
 
 
+"""
+-----------------------------------------------------------------------------------
+Endpoint que toma los datos del marbete del SAT y los muestra antes de registrar un Producto
+
+NOTAS:
+- Utiliza el scrapper
+- Despliega los datos del marbete del SAT, pero no registra el Producto
+- Los campos de ingrediente, peso_cristal y precio_unitario los deja en blanco
+
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_marbete_sat_producto_v2(request, folio_id):
+
+    if request.method == 'GET':
+
+        folio = folio_id
+
+        # Checamos si ya hay un Producto con el mismo folio en la base de datos
+        try:
+            producto = models.Producto.objects.get(folio=folio)
+            mensaje = {'mensaje': 'Este Producto ya esta registrado.'}
+            return Response(mensaje)
+
+        except ObjectDoesNotExist:
+
+            # Ejecutamos el scrapper y tomamos los datos del marbete
+            data_marbete = scrapper_2.get_data_sat(folio)
+
+            # Si el scrapper tuvo problemas con el SAT, notificar error
+            if data_marbete['status'] == '0':
+                mensaje = {'mensaje': 'Hubo un error al conectarse con el SAT. Intente de nuevo más tarde.'}
+                return Response(mensaje)
+
+            # Si el scrapper funcionó OK, retornamos los datos del marbete
+            else:
+                return Response(data_marbete)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
 
 """
 -----------------------------------------------------------------------------------
@@ -1515,6 +1634,196 @@ class ProductoViewSet(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     queryset = models.Producto.objects.all()
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear y actualizar Productos, sin importar si son botellas nacionales
+o importadas
+
+- Los campos de 'peso_cristal', 'precio_unitario' e 'ingrediente' son requeridos
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_producto(request):
+
+    if request.method == 'POST':
+
+        # Tomamos el folio
+        folio = request.data['folio']
+
+        #-----------------------------------------------------------------------------
+        # Si la botella es nacional, serializamos con los datos de botella nacional
+        #-----------------------------------------------------------------------------
+        if folio[0] == 'N':
+
+            payload = {}
+            # Tomamos los datos de la Botella del request
+            payload['folio'] = request.data['folio'] # REQUERIDO
+            payload['tipo_marbete'] = request.data['tipo_marbete'] 
+            payload['fecha_elaboracion_marbete'] = request.data['fecha_elaboracion_marbete']
+            payload['lote_produccion_marbete'] = request.data['lote_produccion_marbete']
+            payload['url'] = request.data['url']
+
+            #payload['producto'] = request.data['producto'] # REQUERIDO
+
+            payload['nombre_marca'] = request.data['nombre_marca']
+            payload['tipo_producto'] = request.data['tipo_producto']
+            payload['graduacion_alcoholica'] = request.data['graduacion_alcoholica']
+            payload['capacidad'] = request.data['capacidad']
+            payload['origen_del_producto'] = request.data['origen_del_producto']
+            payload['fecha_envasado'] = request.data['fecha_envasado']
+            payload['lote_produccion'] = request.data['lote_produccion']
+            payload['nombre_fabricante'] = request.data['nombre_fabricante']
+            payload['rfc_fabricante'] = request.data['rfc_fabricante']
+
+            # DATOS QUE NO SON PARTE DEL MARBETE
+            payload['peso_cristal'] = request.data['peso_cristal']
+            payload['precio_unitario'] = request.data['precio_unitario']
+            payload['ingrediente'] = request.data['ingrediente']
+
+            serializer = serializers.ProductoNacionalWriteSerializer(data=payload)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+        #-----------------------------------------------------------------------------
+        # Si la botella es importada, serializamos con los datos de botella importada
+        #-----------------------------------------------------------------------------
+        else: 
+            payload = {}
+            # Tomamos los datos de la Botella del request
+            payload['folio'] = request.data['folio'] # REQUERIDO
+            payload['tipo_marbete'] = request.data['tipo_marbete'] 
+            payload['fecha_elaboracion_marbete'] = request.data['fecha_elaboracion_marbete']
+            payload['lote_produccion_marbete'] = request.data['lote_produccion_marbete']
+            payload['url'] = request.data['url']
+
+            #payload['producto'] = request.data['producto'] # REQUERIDO
+
+            payload['nombre_marca'] = request.data['nombre_marca']
+            payload['tipo_producto'] = request.data['tipo_producto']
+            payload['graduacion_alcoholica'] = request.data['graduacion_alcoholica']
+            payload['capacidad'] = request.data['capacidad']
+            payload['origen_del_producto'] = request.data['origen_del_producto']
+            payload['fecha_importacion'] = request.data['fecha_importacion']
+            payload['numero_pedimento'] = request.data['numero_pedimento']
+            payload['nombre_fabricante'] = request.data['nombre_fabricante']
+            payload['rfc_fabricante'] = request.data['rfc_fabricante']
+
+            # DATOS QUE NO SON PARTE DEL MARBETE
+            payload['peso_cristal'] = request.data['peso_cristal']
+            payload['precio_unitario'] = request.data['precio_unitario']
+            payload['ingrediente'] = request.data['ingrediente']
+
+            serializer = serializers.ProductoImportadoWriteSerializer(data=payload)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)        
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear y actualizar Productos, sin importar si son botellas nacionales
+o importadas
+
+- Los campos de 'peso_cristal', 'precio_unitario' e 'ingrediente' son requeridos
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_producto_v2(request):
+
+    if request.method == 'POST':
+
+        # Tomamos el folio
+        folio = request.data['folio']
+
+        payload = {}
+        # Tomamos los datos de la Botella del request
+        payload['folio'] = request.data['folio'] # REQUERIDO
+        payload['tipo_marbete'] = request.data['tipo_marbete'] 
+        payload['fecha_elaboracion_marbete'] = request.data['fecha_elaboracion_marbete']
+        payload['lote_produccion_marbete'] = request.data['lote_produccion_marbete']
+        payload['url'] = request.data['url']
+
+        payload['nombre_marca'] = request.data['nombre_marca']
+        payload['tipo_producto'] = request.data['tipo_producto']
+        payload['graduacion_alcoholica'] = request.data['graduacion_alcoholica']
+        payload['capacidad'] = request.data['capacidad']
+        payload['origen_del_producto'] = request.data['origen_del_producto']
+        #payload['fecha_envasado'] = request.data['fecha_envasado']
+
+        """
+        ------------------------------------------------------------------------
+        Si la botella es nacional:
+        - Tomamos del request los datos de 'fecha_envasado' y 'lote_produccion'
+        - Dejamos en blanco 'fecha_importacion' y 'numero_pedimento'
+
+        Si la botella es importada:
+        - Tomamos del request los datos de 'fecha_importacion' y 'numero_pedimento'
+        - Dejamos en blanco 'fecha_envasado' y 'lote_produccion'
+        ------------------------------------------------------------------------
+        """
+        if folio[0] == 'N':
+            payload['fecha_envasado'] = request.data['fecha_envasado']
+            payload['lote_produccion'] = request.data['lote_produccion']
+            payload['fecha_importacion'] = ''
+            payload['numero_pedimento'] = ''
+
+        else:
+            payload['fecha_importacion'] = request.data['fecha_importacion']
+            payload['numero_pedimento'] = request.data['numero_pedimento']
+            payload['fecha_envasado'] = ''
+            payload['numero_pedimento'] = ''
+
+        payload['nombre_fabricante'] = request.data['nombre_fabricante']
+        payload['rfc_fabricante'] = request.data['rfc_fabricante']
+
+        # DATOS QUE NO SON PARTE DEL MARBETE
+
+        # Si el request no contiene 'peso_nueva' asignamos None
+        if 'peso_nueva' in request.data:
+            payload['peso_nueva'] = request.data['peso_nueva']
+        else:
+            payload['peso_nueva'] = None
+
+        # Si el request no contiene 'peso_cristal' asignamos None
+        if 'peso_cristal' in request.data:
+            payload['peso_cristal'] = request.data['peso_cristal']
+        else:
+            payload['peso_cristal'] = None
+
+        payload['precio_unitario'] = request.data['precio_unitario']
+        payload['ingrediente'] = request.data['ingrediente']
+
+        serializer = serializers.ProductoUniversalWriteSerializer(data=payload, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)        
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
@@ -1813,13 +2122,20 @@ def crear_traspaso(request):
         almacen = models.Almacen.objects.get(id=almacen_id)
         sucursal_id = almacen.sucursal.id
 
+        # Si es un folio especial hay que normalizarlo
+        if re.match('^[0-9]*$', folio_id):
+            folio_id = str(sucursal_id) + folio_id
+
         # Checamos que el folio esté registrado en la base de datos
         try:
             botella = models.Botella.objects.get(folio=folio_id)
 
         except ObjectDoesNotExist:
-            mensaje = {'mensaje': 'No se puede hacer el traspaso porque la botella no está registrada.'}
-            return Response(mensaje)
+            response = {
+                'status': 'error',
+                'message': 'No se puede hacer el traspaso porque la botella no está registrada.'
+            }
+            return Response(response)
 
         else: 
             botella = models.Botella.objects.get(folio=folio_id)
@@ -1830,19 +2146,28 @@ def crear_traspaso(request):
 
             # Checamos que el estado de la botella no sea VACIA ni PERDIDA
             if botella.estado == '0':
-                mensaje = {'mensaje': 'Esta botella está registrada como VACIA.'}
-                return Response(mensaje)
+                response = {
+                    'status': 'error',
+                    'message': 'Esta botella está registrada como VACIA.'
+                }
+                return Response(response)
 
             elif botella.estado == '3':
-                mensaje = {'mensaje': 'Esta botella está registrada como PERDIDA.'}
-                return Response(mensaje)
+                response = {
+                    'status': 'error',
+                    'message': 'Esta botella está registrada como PERDIDA.'
+                }
+                return Response(response)
 
             # Checamos que la botella no sea parte del almacén al que se quiere traspasar
             elif botella.almacen.id == almacen.id:
                 #print('::: ALMACEN ID :::')
                 #print(botella.almacen.id)
-                mensaje = {'mensaje': 'Esta botella ya es parte de este almacén.'}
-                return Response(mensaje)
+                response = {
+                    'status': 'error',
+                    'message': 'Esta botella ya es parte de este almacén.'
+                }
+                return Response(response)
 
             else:
                 # Construimos el payload para el serializer
@@ -1944,14 +2269,14 @@ def get_servicios_usuario(request):
         servicios_superuser = {
             'Movimientos': ['Alta Botella', 'Traspaso Botella', 'Baja Botella'],
             'Inspecciones': ['Inventario Total', 'Inventario Rápido'],
-            'Consultas': ['Inventario', 'Botella'],
+            'Consultas': ['Inventario', 'Botella', 'Folios Especiales'],
             'Ingrediente Nuevo': 'Ingrediente Nuevo',
             'Producto Nuevo': 'Producto Nuevo'        
         }
         servicios_user = {
             'Movimientos': ['Alta Botella', 'Traspaso Botella'],
             'Inspecciones': ['Inventario Total', 'Inventario Rápido'],
-            'Consultas': ['Inventario', 'Botella']   
+            'Consultas': ['Inventario', 'Botella', 'Folios Especiales']   
         }
         
         if usuario.is_superuser:
@@ -1962,4 +2287,771 @@ def get_servicios_usuario(request):
 
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que toma los datos del marbete del SAT
+
+NOTAS:
+- Utiliza el scrapper
+- Despliega los datos del marbete, pero no registra la botella
+- Si el marbete no especifica el ingrediente, el response lo deja en blanco
+
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_marbete_sat_v2(request, folio_id):
+ 
+    """
+    -------------------------------------------------------------------------
+    Esta función busca match de Productos utilizando los siguientes filtros:
+    - 'nombre_marca'
+    - 'tipo_producto'
+    - 'capacidad'
+    - 'fecha_envasado'/'fecha_importacion'
+    -------------------------------------------------------------------------
+    """
+    def search_producto(data_marbete):
+        # Tomamos los siguientes datos del marbete: 'folio', 'nombre_marca' y 'capacidad'
+        folio = data_marbete['marbete']['folio']
+        nombre_marca = data_marbete['marbete']['nombre_marca']
+        tipo_producto = data_marbete['marbete']['tipo_producto']
+        capacidad = int(data_marbete['marbete']['capacidad'])
+        
+        # Checamos si hay Productos que hagan match con los criterios de busqueda:
+
+        #---------------------------------------------------------------------------------------
+        # CASO 1: La botella es nacional, utilizamos 'fecha_envasado' en el filtro de busqueda
+        #---------------------------------------------------------------------------------------
+        if folio[0] == 'N':
+
+            fecha_envasado = data_marbete['marbete']['fecha_envasado']
+            
+            # Tomamos el mes de la fecha de envasado
+            mes_envasado = fecha_envasado[3:]
+
+            try:
+                productos = models.Producto.objects.filter(nombre_marca__iexact=nombre_marca, tipo_producto__iexact=tipo_producto, capacidad=capacidad, fecha_envasado__endswith=mes_envasado)
+                # Tomamos el Producto con la fecha de registro mas reciente
+                producto = productos.latest('fecha_registro')
+                # Retornamos el Producto
+                return producto
+
+            # Si no hay un solo Producto que haga match, retornamos None
+            except ObjectDoesNotExist:
+                return None
+
+        #---------------------------------------------------------------------------------------
+        # CASO 2: Si la botella es importada, utilizamos 'fecha_importacion' en el filtro de busqueda
+        #---------------------------------------------------------------------------------------
+        else:
+
+            fecha_importacion = data_marbete['marbete']['fecha_importacion']
+            # Tomamos el mes de la fecha de importacion
+            mes_importacion = fecha_importacion[3:]
+
+            try:
+                productos = models.Producto.objects.filter(nombre_marca__iexact=nombre_marca, tipo_producto__iexact=tipo_producto, capacidad=capacidad, fecha_importacion__endswith=mes_importacion)
+                # Tomamos el Producto con la fecha de registro mas reciente
+                producto = productos.latest('fecha_registro')
+                # Retornamos el Producto
+                return producto
+
+            # Si no hay un solo Producto que haga match, retornamos None
+            except ObjectDoesNotExist:
+                return None
+
+
+    #--------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------------
+
+
+    if request.method == 'GET':
+        
+        # Tomamos las variables del request
+        folio = folio_id
+        
+        # Checamos si la botella ya está registrada en la base de datos
+        try: 
+            botella = models.Botella.objects.get(folio=folio)
+            #botella = models.Botella.objects.get(folio=folio_sat)
+            mensaje = {'mensaje': 'Esta botella ya es parte del inventario.'}
+            return Response(mensaje)
+
+        # Si la botella no está registrada, OK y continuamos
+        except ObjectDoesNotExist:
+            # Obtenemos los datos del marbete del SAT usando el scrapper
+            data_marbete = scrapper_2.get_data_sat(folio)
+
+            # Si el scrapper tuvo problemas para conectarse al SAT, notificamos error.
+            if data_marbete['status'] == '0':
+                mensaje = {'mensaje': 'Hubo problemas al conectarse con el SAT. Intente de nuevo más tarde.'}
+                return Response(mensaje) 
+
+            # Si no hubo problemas para conectarse con el SAT, continuamos:
+
+            #------------------------------------------------------------------------------------------------------
+            # BUSQUEDA DE MATCH DE PRODUCTO
+            #------------------------------------------------------------------------------------------------------
+
+            # Buscamos en la base de datos un match de Producto
+            producto_match = search_producto(data_marbete)
+
+            """
+            Si existe un match de Producto:
+            - Construimos un objecto con los datos del marbete y el Producto (incluyendo su Ingrediente asociado)
+            """
+            if producto_match is not None:
+                # Construimos un diccionario con los datos del marbete
+                serializer = serializers.ProductoIngredienteSerializer(producto_match)
+                # Construimos un objecto con los datos del marbete y el Producto
+                output = {
+                    'data_marbete': data_marbete['marbete'],
+                    'producto': serializer.data
+                }
+                # Retornamos el output
+                return Response(output)
+
+            
+            """
+            Si no hubo un match, notificamos al cliente.
+            """
+            mensaje = {'mensaje': 'No se encontro un match de Producto.'}
+            return Response(mensaje)
+
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que calcula el peso de una botella nueva. Se utiliza en ocasiones como cuando
+se da de alta una botella y se declara como nueva sin pesarla.
+
+INPUTS:
+- El id del Producto asociado a la botella
+
+OUTPUTS:
+- El peso de la botella nueva (numero entero)
+
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_peso_botella_nueva(request, producto_id):
+
+    if request.method == 'GET':
+
+        # Tomamos el produto asociado a la botella
+        producto = models.Producto.objects.get(id=producto_id)
+        peso_nueva = producto.peso_nueva
+
+        # Si el Producto ya cuenta con 'peso_nueva', retornamos ese valor al cliente
+        if peso_nueva is not None:
+            response = {
+                'status': 'success',
+                'data': producto.peso_nueva,
+            }
+            return Response(response)
+
+        # Si el Producto no cuenta con 'peso_nueva', lo tenemos que calcular y retornarlo al cliente:
+        else:
+
+            # Tomamos el 'ingrediente', 'factor_peso', 'capacidad'
+            ingrediente = producto.ingrediente
+            factor_peso = ingrediente.factor_peso
+            capacidad = producto.capacidad
+            peso_cristal = producto.peso_cristal
+
+            # Si el Producto asociado a la botella no tiene registrado el peso del cristal, notificamos al cliente
+            if peso_cristal is None:
+                response = {
+                    'status': 'error',
+                    'message': 'El Producto asociado a esta botella no tiene un peso de cristal registrado.'
+                }
+                return Response(response)
+
+            # Si el Producto asociado a la botella no tiene registrada la capacidad, notificamos al cliente
+            elif capacidad is None:
+                response = {
+                    'status': 'error',
+                    'message': 'El Producto asociado a esta botella no tiene capacidad registrada.'
+                }
+                return Response(response)
+
+            # Si el Ingrediente del Producto asociado a la botella no tiene registrado el factor de peso, notificamos al cliente
+            elif factor_peso is None:
+                response = {
+                    'status': 'error',
+                    'message': 'El Ingrediente del Producto asociado a esta botella no tiene factor de peso registrado.'
+                }
+                return Response(response)
+
+            # Si no hay probelmas, calculamos el peso de la botella nueva sin tapa
+            else:
+
+                peso_nueva = round(peso_cristal + (capacidad * factor_peso))
+
+                # Construimos el response
+                response = {
+                    'status': 'success',
+                    'data': peso_nueva,
+                }
+                return Response(response)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que retorna los datos de un Producto a partir de su codigo de barras
+
+INPUTS:
+-  El codigo de barras
+
+OUTPUTS:
+-  Los datos del Producto
+
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_producto(request, codigo_barras):
+
+    if request.method == 'GET':
+
+        # Checamos si el Producto existe en la base de datos
+        # Si el producto existe, retornamos sus datos
+        try:
+            producto = models.Producto.objects.get(codigo_barras=codigo_barras)
+            serializer = serializers.ProductoSerializer(producto)
+
+            response = {
+                'status': 'success',
+                'data': serializer.data
+            }
+
+            return Response(response)
+
+        # Si el producto no existe, retornamos un mensaje de error
+        except ObjectDoesNotExist:
+
+            response = {
+                'status': 'error',
+                'message': 'No existe un Producto con ese codigo de barras.'
+            }
+
+            return Response(response)
+
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear una Botella nueva
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_botella_nueva(request):
+
+    if request.method == 'POST':
+
+        # Construimos el payload
+        payload = {}
+
+        payload['usuario_alta'] = request.user.id
+        payload['sucursal'] = request.data['sucursal']
+        payload['almacen'] = request.data['almacen']
+        payload['proveedor'] = request.data['proveedor'] 
+        payload['producto'] = request.data['producto']
+        payload['folio'] = request.data['folio']
+
+        # Si el peso de la botella medido con la bascula viene en el request, lo incluimos en el payload
+        if 'peso_nueva' in request.data:
+            
+            payload['peso_nueva'] = request.data['peso_nueva']
+
+        # Si el peso de la botella medido con la bascula no viene en el request, le asignamos None
+        else:
+
+            payload['peso_nueva'] = None
+
+        """
+        ------------------------------------------------------------------------------------------
+        Serializamos el payload:
+
+        - CASO 1: Si el payload no incluye el tipo de captura, usamos el serializer estandar
+        - CASO 2: Si el payload especifica captura de tipo manual, usamos un serilizador especial
+        -------------------------------------------------------------------------------------------
+        """
+        # CASO 1: CAPTURA CON LECTOR DE SMARTPHONE
+
+        if 'captura_folio' not in request.data:
+
+            serializer = serializers.BotellaNuevaSerializer(data=payload, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+        # CASO 2: CAPTURA MANUAL
+
+        if 'captura_folio' in request.data:
+            # Tomamos el folio y eliminamos cualquier guion medio
+            payload['folio'] = payload['folio'].replace('-', '')
+
+            # Si el folio resultante es '', retornamos un error
+            if payload['folio'] == '':
+                response = {
+                    'status': 'error',
+                    'message': 'El número de folio está vacío.'
+                }
+                return Response(response)
+
+        # Si el folio resultante tiene más de 12 caracteres
+        if len(payload['folio']) > 12:
+            response = {
+                'status': 'error',
+                'message': 'El folio del SAT no debe contener más de 13 caracteres.'
+            }
+            return Response(response)
+
+        # Serializamos el payload
+        serializer = serializers.BotellaNuevaSerializerFolioManual(data=payload, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+    
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear un Producto nuevo sin necesidad de scrapear el SAT
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_producto_v3(request):
+
+    if request.method == 'POST':
+
+        # Construimos el payload del request
+        payload = {}
+        payload['ingrediente']      = request.data['ingrediente']
+        payload['codigo_barras']    = request.data['codigo_barras']
+        payload['nombre_marca']     = request.data['nombre']
+        payload['capacidad']        = request.data['capacidad']
+        payload['precio_unitario']  = request.data['precio_unitario']
+
+        # Si el peso del blueprint viene incluido en el request, lo tomamos.
+        # SI no viene incluido, le asignamos None
+        if 'peso_nueva' in request.data:
+            payload['peso_nueva'] = request.data['peso_nueva']
+
+        else:
+            payload['peso_nueva'] = None
+
+        # Serializamos el payload
+        serializer = serializers.ProductoNuevoSerializer(data=payload)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para buscar un match de Botella, usando los siguientes datos del marbete:
+
+- nombre_marca
+- tipo_producto
+- capacidad
+- fecha_envasado/fecha_importacion
+
+NOTAS:
+- Utiliza el scrapper
+- Despliega los datos del marbete, pero no registra la botella
+- Si el marbete no especifica el ingrediente, el response lo deja en blanco
+
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_match_botella(request, folio_id):
+ 
+    """
+    -------------------------------------------------------------------------
+    Esta función busca match de Botellas utilizando los siguientes filtros:
+    - 'nombre_marca'
+    - 'tipo_producto'
+    - 'capacidad'
+    - 'fecha_envasado'/'fecha_importacion'
+    -------------------------------------------------------------------------
+    """
+    def search_botella(data_marbete):
+        # Tomamos los siguientes datos del marbete: 'folio', 'nombre_marca' y 'capacidad'
+        folio = data_marbete['marbete']['folio']
+        nombre_marca = data_marbete['marbete']['nombre_marca']
+        tipo_producto = data_marbete['marbete']['tipo_producto']
+        capacidad = int(data_marbete['marbete']['capacidad'])
+        
+        # Checamos si hay Botellas que hagan match con los criterios de busqueda:
+
+        #---------------------------------------------------------------------------------------
+        # CASO 1: La botella es nacional, utilizamos 'fecha_envasado' en el filtro de busqueda
+        #---------------------------------------------------------------------------------------
+        if folio[0] == 'N':
+
+            fecha_envasado = data_marbete['marbete']['fecha_envasado']
+            
+            # Tomamos el mes de la fecha de envasado
+            mes_envasado = fecha_envasado[3:]
+
+            try:
+                botellas = models.Botella.objects.filter(nombre_marca__iexact=nombre_marca, tipo_producto__iexact=tipo_producto, capacidad=capacidad, fecha_envasado__endswith=mes_envasado)
+                # Tomamos la Botella con la fecha de registro mas reciente
+                botella = botellas.latest('fecha_registro')
+                # Retornamos la Botella
+                return botella
+
+            # Si no hay una sola Botella que haga match, retornamos None
+            except ObjectDoesNotExist:
+                return None
+
+        #---------------------------------------------------------------------------------------
+        # CASO 2: Si la botella es importada, utilizamos 'fecha_importacion' en el filtro de busqueda
+        #---------------------------------------------------------------------------------------
+        else:
+
+            fecha_importacion = data_marbete['marbete']['fecha_importacion']
+            # Tomamos el mes de la fecha de importacion
+            mes_importacion = fecha_importacion[3:]
+
+            try:
+                botellas = models.Botella.objects.filter(nombre_marca__iexact=nombre_marca, tipo_producto__iexact=tipo_producto, capacidad=capacidad, fecha_importacion__endswith=mes_importacion)
+                # Tomamos la Botella con la fecha de registro mas reciente
+                botella = botellas.latest('fecha_registro')
+                # Retornamos la Botella
+                return botella
+
+            # Si no hay un solo Producto que haga match, retornamos None
+            except ObjectDoesNotExist:
+                return None
+
+
+    #--------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------------
+
+
+    if request.method == 'GET':
+        
+        # Tomamos las variables del request
+        folio = folio_id
+        
+        # Checamos si la botella ya está registrada en la base de datos
+        try: 
+            botella = models.Botella.objects.get(folio=folio)
+            #botella = models.Botella.objects.get(folio=folio_sat)
+           
+            response = {
+                'status': 'error',
+                'message': 'Esta botella ya es parte del inventario.'
+            }
+            return Response(response)
+
+        # Si la botella no está registrada, OK y continuamos
+        except ObjectDoesNotExist:
+            # Obtenemos los datos del marbete del SAT usando el scrapper
+            data_marbete = scrapper_2.get_data_sat(folio)
+
+            # Si el scrapper tuvo problemas para conectarse al SAT, notificamos error.
+            if data_marbete['status'] == '0':
+                #mensaje = {'mensaje': 'Hubo problemas al conectarse con el SAT. Intente de nuevo más tarde.'}
+                response = {
+                    'status': 'error',
+                    'message': 'Hubo problemas al conectarse con el SAT. Intente de nuevo más tarde.'
+                }
+                return Response(response) 
+
+            # Si no hubo problemas para conectarse con el SAT, continuamos:
+
+            #------------------------------------------------------------------------------------------------------
+            # BUSQUEDA DE MATCH DE BOTELLA
+            #------------------------------------------------------------------------------------------------------
+
+            # Buscamos en la base de datos un match de Botella
+            botella_match = search_botella(data_marbete)
+
+            """
+            Si existe un match de Botella:
+            - Construimos un objecto con los datos del marbete y la Botella 
+            """
+            if botella_match is not None:
+                # Construimos un diccionario con los datos del marbete
+                #serializer = serializers.ProductoIngredienteSerializer(producto_match)
+                serializer = serializers.BotellaProductoSerializer(botella_match)
+
+                # Construimos un objecto con los datos de la Botella
+
+                #output = {
+                #    'data_marbete': data_marbete['marbete'],
+                #    'producto': serializer.data
+                #}
+                
+                response = {
+                    'status': 'success',
+                    'data': serializer.data
+                }
+
+                # Retornamos el output
+                return Response(response)
+
+            
+            """
+            Si no hubo un match, notificamos al cliente.
+            """
+            response = {
+                'status': 'error',
+                'message': 'No se encontro un match de Botella.'
+            }
+            return Response(response)
+
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint para crear una Botella usada
+-----------------------------------------------------------------------------------
+"""
+@api_view(['POST'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def crear_botella_usada(request):
+
+    if request.method == 'POST':
+
+        # Construimos el payload
+        payload = {}
+
+        payload['usuario_alta'] = request.user.id
+        payload['sucursal'] = request.data['sucursal']
+        payload['almacen'] = request.data['almacen']
+        payload['proveedor'] = request.data['proveedor'] 
+        payload['producto'] = request.data['producto']
+        payload['folio'] = request.data['folio']
+        payload['peso_nueva'] = request.data['peso_nueva']
+        payload['peso_inicial'] = request.data['peso_bascula']
+
+        """
+        ------------------------------------------------------------------------------------------
+        Serializamos el payload:
+
+        - CASO 1: Si el payload no incluye el tipo de captura, usamos el serializer estandar
+        - CASO 2: Si el payload especifica captura de tipo manual, usamos un serilizador especial
+        -------------------------------------------------------------------------------------------
+        """
+        # CASO 1: CAPTURA CON LECTOR DE SMARTPHONE
+
+        if 'captura_folio' not in request.data:
+
+            serializer = serializers.BotellaUsadaSerializer(data=payload, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+        # CASO 2: CAPTURA MANUAL
+
+        if 'captura_folio' in request.data:
+            # Tomamos el folio y eliminamos cualquier guion medio
+            payload['folio'] = payload['folio'].replace('-', '')
+
+            # Si el folio resultante es '', retornamos un error
+            if payload['folio'] == '':
+                response = {
+                    'status': 'error',
+                    'message': 'El número de folio está vacío.'
+                }
+                return Response(response)
+
+        # Si el folio resultante tiene más de 12 caracteres
+        if len(payload['folio']) > 12:
+            response = {
+                'status': 'error',
+                'message': 'El folio del SAT no debe contener más de 13 caracteres.'
+            }
+            return Response(response)
+
+        # Serializamos el payload
+        serializer = serializers.BotellaUsadaSerializerFolioManual(data=payload, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que modifica el estado de una botella inspeccionada a 'VACIA' o 'NUEVA' y
+modifica su peso ad hoc
+-----------------------------------------------------------------------------------
+"""
+@api_view(['PATCH'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def update_botella_nueva_vacia(request):
+
+    if request.method == 'PATCH':
+
+        # Tomamos las variables del request
+        item_inspeccion_id =  request.data['item_inspeccion']
+        estado_botella = request.data['estado']
+
+        # Tomamos el ItemInspeccion que deseamos actualizar
+        item = models.ItemInspeccion.objects.get(id=item_inspeccion_id)
+
+        # Tomamos la Botella asociada al ItemInspeccion
+        botella = item.botella
+        # Tomamos el Producto asociado a la Botella
+        #producto = botella.producto
+        # Tomamos el Ingrediente asociado a la Botella y el Producto
+        #ingrediente = producto.ingrediente
+
+        # Si queremos declarar la botella como VACIA
+        if estado_botella == '0':
+            # Tomamos el peso de la botella vacía
+            peso_botella = botella.peso_cristal
+        # Si queremos declarar la botella como NUEVA
+        elif estado_botella == '2':
+            # Calculamos el peso de la botella nueva
+            #peso_botella = producto.peso_cristal + int(round(producto.capacidad * ingrediente.factor_peso))
+            peso_botella = botella.peso_nueva
+
+       # Creamos el payload para el serializer
+        payload = {
+            'peso_botella': peso_botella,
+            'inspeccionado': True,
+            'botella': {'estado': estado_botella}
+        }
+
+        # Deserializamos el payload
+        serializer = serializers.ItemInspeccionBotellaUpdateSerializer(item, data=payload, partial=True)
+        # Verificamos que los datos a deserializar sean válidos
+        if serializer.is_valid():
+            # Actualizamos los datos de nuestro ItemInspeccion
+            serializer.save()
+            # Creamos el response
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        else:
+            # Si hay un error con los datos, lo notificamos
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Si el request no es PATCH, notificamos error
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+-----------------------------------------------------------------------------------
+Endpoint que muestra una lista con los números de folios custom más recientes
+-----------------------------------------------------------------------------------
+"""
+@api_view(['GET'],)
+@permission_classes((IsAuthenticated,))
+@authentication_classes((TokenAuthentication,))
+def get_folios_especiales(request, sucursal_id):
+
+    if request.method == 'GET':
+
+        # Tomamos la sucursal
+        sucursal = models.Sucursal.objects.get(id=sucursal_id)
+
+        # Tomamos los últimos 10 folios especiales de la sucursal
+        folios_custom = models.Botella.objects.filter(sucursal=sucursal)
+        folios_custom = folios_custom.exclude(Q(folio__startswith='Nn') | Q(folio__startswith='Ii'))
+        folios_custom = folios_custom[:10]
+
+        #print('::: FOLIOS ESPECIALES :::')
+        #print([botella.folio for botella in folios_custom])
+
+        # Si hay al menos un folio especial, retornamos una lista
+        if folios_custom.count() > 0:
+
+            # Creamos un generator con los items del queryset
+            generator_botellas = (botella for botella in folios_custom)
+
+            # Creamos otro generator para iterar por el anterior y convertir los folios a INT
+            folios_int = (int(botella.folio) for botella in generator_botellas)
+            
+            # Convertimos el generator en una lista y la ordenamos de mayor a menor
+            folios_ordenados = list(folios_int)
+
+            #print('::: FOLIOS DESORDENADOS :::')
+            #print(folios_ordenados)
+
+            folios_ordenados = sorted(folios_ordenados, reverse=True)
+
+            #print('::: FOLIOS ORDENADOS :::')
+            #print(folios_ordenados)
+
+            # Construimos el response
+            response = {
+                'status': 'success',
+                'data': folios_ordenados
+            }
+
+            return Response(response)
+
+        # Si no hay folios especiales, notificamos al cliente
+        response = {
+            'status': 'error',
+            'message': 'No hay folios especiales en esta sucursal.'
+        }
+        return Response(response)
+
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 

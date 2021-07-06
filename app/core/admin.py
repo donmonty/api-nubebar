@@ -26,6 +26,19 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
+# Agregamos inlines para las Recetas
+class IngredienteRecetaInline(admin.TabularInline):
+    model = models.IngredienteReceta
+    extra = 1
+
+class IngredienteAdmin(admin.ModelAdmin):
+    inlines = (IngredienteRecetaInline,)
+    search_fields = ['nombre', 'codigo']
+
+class RecetaAdmin(admin.ModelAdmin):
+    inlines = (IngredienteRecetaInline,)
+    search_fields = ['nombre', 'codigo_pos']
+
 
 
 admin.site.register(models.Cliente)

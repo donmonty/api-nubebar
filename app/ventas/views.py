@@ -39,7 +39,7 @@ def upload_reporte_ventas(request, nombre_sucursal):
         ventas_csv = request.FILES['ventas_csv']
 
         # Definimos los tipos de archivos permitidos
-        extensiones_permitidas = ['csv', 'xlsx', 'xls']
+        extensiones_permitidas = ['csv', 'xlsx', 'xls', 'XLS']
         # Tomamos la extensión del archivo a subir 
         nombre_archivo = ventas_csv.name
         tipo_archivo = nombre_archivo.split('.')[1]

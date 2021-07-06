@@ -28,10 +28,13 @@ def registrar(df_ventas, sucursal):
         except ObjectDoesNotExist:
             #sin_registro = [sucursal.slug, codigo_pos, nombre]
             sin_registro = models.ProductoSinRegistro.objects.create(
-                sucursal=sucursal.slug,
+                #sucursal=sucursal.slug,
+                sucursal=sucursal,
                 codigo_pos=codigo_pos,
                 caja=caja_id,
-                nombre=nombre
+                nombre=nombre,
+                unidades=unidades,
+                importe=importe
                 )
             productos_no_registrados.append(sin_registro)
 
